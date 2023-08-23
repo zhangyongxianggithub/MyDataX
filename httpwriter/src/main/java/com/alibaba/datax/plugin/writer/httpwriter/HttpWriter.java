@@ -104,6 +104,7 @@ public class HttpWriter extends Writer {
 
         @Override
         public void startWrite(final RecordReceiver lineReceiver) {
+            lineReceiver.getFromReader()
             log.info(lineReceiver.getFromReader().toString());
             log.info("task startWrite, {}, {}, {}, {}", this.getPluginJobConf(),
                     this.getDescription(), this.getDeveloper(),
