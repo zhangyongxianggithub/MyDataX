@@ -20,32 +20,46 @@ public class HttpWriter extends Writer {
         
         @Override
         public void preCheck() {
-            log.info("pre check");
+            
+            log.info("job pre check, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public void prepare() {
-            log.info("pre check");
+            log.info("job prepare, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public void post() {
-            log.info("pre check");
+            log.info("job post, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public void init() {
-            log.info("pre check");
+            log.info("job init, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public void destroy() {
-            log.info("pre check");
+            log.info("job destroy, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public List<Configuration> split(final int mandatoryNumber) {
             final Configuration configurations = this.getPluginJobConf();
+            log.info("job split, {}, {}, {}, {}, {}",
+                    this.getPluginJobConf(), this.getDescription(),
+                    this.getDeveloper(), this.getPluginName(), mandatoryNumber);
             return Lists.newArrayList(configurations);
         }
     }
@@ -55,17 +69,45 @@ public class HttpWriter extends Writer {
         
         @Override
         public void init() {
-            log.info("task init");
+            log.info("task init, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
         
         @Override
         public void destroy() {
-            log.info("task destroy");
+            log.info("task destroy, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
         }
-        
+
+        @Override
+        public void preCheck() {
+            log.info("task check, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
+        }
+
+        @Override
+        public void prepare() {
+            log.info("task prepare, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
+        }
+
+        @Override
+        public void post() {
+            log.info("task post, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
+        }
+
         @Override
         public void startWrite(final RecordReceiver lineReceiver) {
             log.info(lineReceiver.getFromReader().toString());
+            log.info("task startWrite, {}, {}, {}, {}", this.getPluginJobConf(),
+                    this.getDescription(), this.getDeveloper(),
+                    this.getPluginName());
             System.out.println(lineReceiver.getFromReader().toString());
         }
     }
