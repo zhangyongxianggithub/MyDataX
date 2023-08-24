@@ -7,10 +7,10 @@
     "headers": {
       "aaa": "bbbb"
     },
-    "query": {},
-    "body": {},
-    "extra": {
-      ""
-    }
+    "query": {
+      "test": "test"
+    },
+    "maxRetries": 3,
+    "batchSize": 1000
   }
 }
