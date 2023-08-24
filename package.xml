@@ -512,7 +512,7 @@
             <outputDirectory>datax</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>httpwriter/target/datax/</directory>
+            <directory>httpjsonwriter/target/datax/</directory>
             <includes>
                 <include>**/*.*</include>
             </includes>

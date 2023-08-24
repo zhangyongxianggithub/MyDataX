@@ -8,7 +8,7 @@ package com.alibaba.datax.plugin.writer.httpwriter;
  * @description:
  **/
 
-public class Key {
+public final class Key {
     
     private Key() {}
     
@@ -29,4 +29,10 @@ public class Key {
     public static final String BATCH_SIZE = "batchSize";
     
     public static final String TASK_INDEX = "taskIndex";
+    
+    public static final String FIELDS = "fields";
+    
+    public static final String PRINT = "print";
+    
+    public static final String FAIL_FAST = "failFast";
 }

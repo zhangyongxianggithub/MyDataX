@@ -48,7 +48,7 @@
 
         <!-- reader -->
         <module>mysqlreader</module>
-        <module>drdsreader</module>
+      <!--  <module>drdsreader</module>
         <module>sqlserverreader</module>
         <module>postgresqlreader</module>
         <module>kingbaseesreader</module>
@@ -68,9 +68,9 @@
         <module>ossreader</module>
         <module>hdfsreader</module>
         <module>ftpreader</module>
-        <module>txtfilereader</module>
+        <module>txtfilereader</module>-->
         <module>streamreader</module>
-        <module>clickhousereader</module>
+       <!-- <module>clickhousereader</module>
 
         <module>mongodbreader</module>
         <module>tdenginereader</module>
@@ -81,7 +81,7 @@
         <module>datahubreader</module>
         <module>starrocksreader</module>
 
-        <!-- writer -->
+        writer
         <module>mysqlwriter</module>
         <module>starrockswriter</module>
         <module>drdswriter</module>
@@ -124,8 +124,8 @@
         <module>doriswriter</module>
         <module>selectdbwriter</module>
         <module>adbmysqlwriter</module>
-        <module>neo4jwriter</module>
-        <module>httpwriter</module>
+        <module>neo4jwriter</module>-->
+        <module>httpjsonwriter</module>
 
         <!-- common support module -->
         <module>plugin-rdbms-util</module>

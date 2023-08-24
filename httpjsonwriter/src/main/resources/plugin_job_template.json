@@ -1,5 +1,5 @@
 {
-  "name": "httpwriter",
+  "name": "httpjsonwriter",
   "parameter": {
     "url": "http://localhost:8080/datax",
     "method": "post",
@@ -12,6 +12,11 @@
     },
     "maxRetries": 3,
     "batch": true,
-    "batchSize": 1000
+    "batchSize": 1000,
+    "fields": [
+      "a",
+      "b"
+    ],
+    "print": true
   }
 }

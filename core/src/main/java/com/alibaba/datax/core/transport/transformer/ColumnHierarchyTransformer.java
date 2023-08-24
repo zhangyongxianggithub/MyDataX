@@ -1,8 +1,5 @@
 package com.alibaba.datax.core.transport.transformer;
 
-import java.util.List;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,30 +21,31 @@ public class ColumnHierarchyTransformer extends Transformer {
     
     @Override
     public Record evaluate(final Record record, final Object... paras) {
-        if (paras.length < 1) {
-            return record;
-        } else {
-            Map<String, List<String>> columnHierarchy= (Map<String, List<String>>) paras[0];
-
-        }
-        
-        final Column column = record.getColumn(columnIndex);
-        try {
-            final String oriValue = column.asString();
-            if (oriValue == null) {
-                return record;
-            }
-            if (column.getType() == Column.Type.STRING) {
-                final EncryptUtil encryptUtil = EncryptUtil.getInstance();
-                final String newValue = encryptUtil.AESencode(oriValue,
-                        ENCRYPT_KEY);
-                record.setColumn(columnIndex, new StringColumn(newValue));
-            }
-        } catch (final Exception e) {
-            throw DataXException.asDataXException(
-                    TransformerErrorCode.TRANSFORMER_RUN_EXCEPTION,
-                    e.getMessage(), e);
-        }
+        // if (paras.length < 1) {
+        // return record;
+        // } else {
+        // Map<String, List<String>> columnHierarchy= (Map<String,
+        // List<String>>) paras[0];
+        //
+        // }
+        //
+        // final Column column = record.getColumn(columnIndex);
+        // try {
+        // final String oriValue = column.asString();
+        // if (oriValue == null) {
+        // return record;
+        // }
+        // if (column.getType() == Column.Type.STRING) {
+        // final EncryptUtil encryptUtil = EncryptUtil.getInstance();
+        // final String newValue = encryptUtil.AESencode(oriValue,
+        // ENCRYPT_KEY);
+        // record.setColumn(columnIndex, new StringColumn(newValue));
+        // }
+        // } catch (final Exception e) {
+        // throw DataXException.asDataXException(
+        // TransformerErrorCode.TRANSFORMER_RUN_EXCEPTION,
+        // e.getMessage(), e);
+        // }
         return record;
     }
 }

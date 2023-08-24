@@ -22,7 +22,13 @@ public enum HttpWriterErrorCode implements ErrorCode {
     /**
      * parameter config error
      */
-    CONFIG_INVALID_EXCEPTION("HttpWriter-02", "您的参数配置错误.");
+    CONFIG_INVALID_EXCEPTION("HttpWriter-02", "您的参数配置错误."),
+    
+    EMPTY_RECORD_EXCEPTION("HttpWriter-03", "空数据"),
+    
+    FIELD_CLASS_BOT_FOUND_EXCEPTION("HttpWriter-04", "空数据"),
+    
+    URL_INVALID_EXCEPTION("HttpWriter-04", "您填写的URL参数值不合法");
     
     private final String code;
     private final String description;
