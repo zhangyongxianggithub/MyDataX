@@ -2,8 +2,11 @@ package com.alibaba.datax.plugin.writer.httpwriter;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.IntStream;
 
+import com.alibaba.datax.common.element.Record;
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.plugin.RecordReceiver;
 import com.alibaba.datax.common.spi.Writer;
@@ -12,14 +15,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import kong.unirest.HttpMethod;
-import kong.unirest.HttpResponse;
-import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.alibaba.datax.plugin.writer.httpwriter.HttpWriterErrorCode.RUNTIME_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.httpwriter.Key.BATCH_MODE;
 import static com.alibaba.datax.plugin.writer.httpwriter.Key.BATCH_SIZE;
 import static com.alibaba.datax.plugin.writer.httpwriter.Key.HTTP_HEADERS;
 import static com.alibaba.datax.plugin.writer.httpwriter.Key.HTTP_METHOD;
@@ -139,7 +141,11 @@ public class HttpWriter extends Writer {
         
         private Integer maxRetries;
         
+        private Boolean batchMode;
+        
         private Integer batchSize;
+        
+        private Queue<Record> recordQueue;
         
         @Override
         public void init() {
@@ -153,7 +159,9 @@ public class HttpWriter extends Writer {
                     String.class);
             this.query = this.writerSliceConfig.getMap(HTTP_QUERY);
             this.maxRetries = this.writerSliceConfig.getInt(MAX_RETRIES);
+            this.batchMode = this.writerSliceConfig.getBool(BATCH_MODE, false);
             this.batchSize = this.writerSliceConfig.getInt(BATCH_SIZE);
+            this.recordQueue = new LinkedBlockingQueue<>(1000);
             log.info(
                     "{} task {} initialized, desc: {}, developer: {}, task conf: {}",
                     this.getPluginName(), this.taskIndex, this.getDescription(),
@@ -193,9 +201,9 @@ public class HttpWriter extends Writer {
         @Override
         public void startWrite(final RecordReceiver lineReceiver) {
             
-//            final HttpResponse<JsonNode> response = this.unirest
-//                    .request(this.method.name(), "").queryString(this.query)
-//                    .asJson();
+            // final HttpResponse<JsonNode> response = this.unirest
+            // .request(this.method.name(), "").queryString(this.query)
+            // .asJson();
             
             log.info(lineReceiver.getFromReader().toString());
             log.info("task startWrite, {}, {}, {}, {}", this.getPluginJobConf(),

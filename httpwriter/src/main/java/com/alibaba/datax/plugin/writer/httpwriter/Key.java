@@ -24,6 +24,8 @@ public class Key {
     
     public static final String MAX_RETRIES = "maxRetries";
     
+    public static final String BATCH_MODE = "batch";
+    
     public static final String BATCH_SIZE = "batchSize";
     
     public static final String TASK_INDEX = "taskIndex";
