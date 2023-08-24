@@ -1,0 +1,38 @@
+{
+  "name": "restwriter",
+  "parameter": {
+    "url": "http://localhost:8080/echo",
+    "method": "post",
+    "ssl": false,
+    "headers": {
+      "aaa": "bbbb"
+    },
+    "query": {
+      "test": "test"
+    },
+    "maxRetries": 3,
+    "batch": true,
+    "batchSize": 1000,
+    "fields": [
+      {
+        "name": "a"
+      },
+      {
+        "name": "b"
+      },
+      {
+        "name": "c",
+        "type": "java.time.LocalDatetime"
+      },
+      {
+        "name": "d"
+      },
+      {
+        "name": "e"
+      }
+    ],
+    "print": true,
+    "failFast": false,
+    "rate-per-task": 10
+  }
+}
