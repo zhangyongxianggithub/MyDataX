@@ -5,13 +5,9 @@ import com.alibaba.datax.common.util.Configuration;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 18:32
- * @description:
  **/
-
 public class ConfigurationValidator
         implements ParameterValidator<Configuration> {
     

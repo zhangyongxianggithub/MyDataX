@@ -1,13 +1,9 @@
 package com.alibaba.datax.plugin.writer.restwriter;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 11:38
- * @description:
  **/
-
 public final class Key {
     
     private Key() {}

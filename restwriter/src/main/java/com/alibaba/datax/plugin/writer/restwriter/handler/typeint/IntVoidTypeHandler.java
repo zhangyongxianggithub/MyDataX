@@ -3,11 +3,8 @@ package com.alibaba.datax.plugin.writer.restwriter.handler.typeint;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandler;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 21:22
- * @description:
  **/
 
 public class IntVoidTypeHandler implements TypeHandler<Object> {

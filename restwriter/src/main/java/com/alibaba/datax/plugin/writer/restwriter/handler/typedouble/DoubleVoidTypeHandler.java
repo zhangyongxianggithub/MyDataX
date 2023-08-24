@@ -3,11 +3,8 @@ package com.alibaba.datax.plugin.writer.restwriter.handler.typedouble;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandler;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 21:45
- * @description:
  **/
 
 public class DoubleVoidTypeHandler implements TypeHandler<Object> {

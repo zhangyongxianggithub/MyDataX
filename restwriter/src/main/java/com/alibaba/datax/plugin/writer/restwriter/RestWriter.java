@@ -44,7 +44,9 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUN
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 
 /**
- * Created by zhangyongxiang on 2023-08-23.
+ *
+ * @author zhangyongxiang
+ * @date 2023-08-23
  */
 @Slf4j
 public class RestWriter extends Writer {

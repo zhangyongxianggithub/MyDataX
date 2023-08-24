@@ -17,13 +17,9 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIE
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 14:25
- * @description:
  **/
-
 public class ObjectRecordConverter
         implements RecordConverter<Map<String, Object>> {
     

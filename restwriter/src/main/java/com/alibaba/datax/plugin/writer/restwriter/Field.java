@@ -3,11 +3,8 @@ package com.alibaba.datax.plugin.writer.restwriter;
 import lombok.Data;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 21:58
- * @description:
  **/
 @Data
 public class Field {

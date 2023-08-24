@@ -15,13 +15,9 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 21:03
- * @description:
  **/
-
 public class TypeHandlerRegistry {
     
     private final Table<Column.Type, Class<?>, TypeHandler<?>> handlers = HashBasedTable

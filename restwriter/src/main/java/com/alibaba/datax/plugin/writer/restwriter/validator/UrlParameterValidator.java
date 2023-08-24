@@ -11,11 +11,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.URL
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 18:03
- * @description:
  **/
 @Slf4j
 public class UrlParameterValidator implements ParameterValidator<String> {

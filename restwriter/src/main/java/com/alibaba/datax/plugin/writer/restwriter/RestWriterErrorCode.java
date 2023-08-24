@@ -3,13 +3,9 @@ package com.alibaba.datax.plugin.writer.restwriter;
 import com.alibaba.datax.common.spi.ErrorCode;
 
 /**
- * @version 1.0
- * @name: zhangyongxiang
- * @author: zhangyongxiang@baidu.com
+ * @author: zhangyongxiang
  * @date 2023/8/24 11:34
- * @description:
  **/
-
 public enum RestWriterErrorCode implements ErrorCode {
     /**
      * runtime exception
