@@ -44,7 +44,6 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUN
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 
 /**
- *
  * @author zhangyongxiang
  * @date 2023-08-23
  */
@@ -217,6 +216,7 @@ public class RestWriter extends Writer {
             }
             this.unirest.config().addShutdownHook(true);
             this.unirest.config().defaultBaseUrl(this.url);
+            this.unirest.config().verifySsl(false);
             this.converter = new ObjectRecordConverter(
                     new TypeHandlerRegistry(), this.fields);
             this.startTime = System.currentTimeMillis();
@@ -321,20 +321,23 @@ public class RestWriter extends Writer {
         private void doWrite(final List<Record> records) {
             final List<Map<String, Object>> body = records.stream()
                     .map(this.converter::convert).collect(Collectors.toList());
-            final HttpResponse<JsonNode> response = this.unirest
-                    .request(this.method.name(), "").queryString(this.query)
-                    .body(body).asJson();
-            if (response.isSuccess()) {
-                this.successCount += records.size();
-                log.info("the {}th record has been written successfully",
-                        this.successCount);
-            } else {
-                this.failCount += records.size();
-                log.error(
-                        "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
-                        response.getStatus(), response.getStatusText(),
-                        response.getBody(), body);
-            }
+            this.unirest.request(this.method.name(), "").queryString(this.query)
+                    .body(body).asJson().ifSuccess(response -> {
+                        this.successCount += records.size();
+                        log.info(
+                                "the {}th record has been written successfully",
+                                this.successCount);
+                    }).ifFailure(response -> {
+                        this.failCount += records.size();
+                        log.error(
+                                "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
+                                response.getStatus(), response.getStatusText(),
+                                response.getBody(), body);
+                        response.getParsingError().ifPresent(e -> {
+                            log.error("parsing exception", e);
+                            log.error("original body: " + e.getOriginalBody());
+                        });
+                    });
         }
     }
 }
