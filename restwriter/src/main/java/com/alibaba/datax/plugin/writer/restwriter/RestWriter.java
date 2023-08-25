@@ -300,21 +300,23 @@ public class RestWriter extends Writer {
         
         private void doWrite(final Record item) {
             final Map<String, Object> body = this.converter.convert(item);
-            final HttpResponse<JsonNode> response = this.unirest
-                    .request(this.method.name(), "").queryString(this.query)
-                    .body(body).asJson();
-            if (response.isSuccess()) {
-                this.successCount += 1;
-                log.info("the {}th record has been written successfully",
-                        this.successCount);
-            } else {
-                // append fail data to file
-                this.failCount += 1;
-                log.error(
-                        "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
-                        response.getStatus(), response.getStatusText(),
-                        response.getBody(), body);
-            }
+            this.unirest.request(this.method.name(), "").queryString(this.query)
+                    .body(body).asJson().ifSuccess(response -> {
+                        this.successCount += 1;
+                        log.info(
+                                "the {}th record has been written successfully",
+                                this.successCount);
+                    }).ifFailure(response -> {
+                        this.failCount += 1;
+                        log.error(
+                                "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
+                                response.getStatus(), response.getStatusText(),
+                                response.getBody(), body);
+                        response.getParsingError().ifPresent(e -> {
+                            log.error("parsing exception", e);
+                            log.error("original body: " + e.getOriginalBody());
+                        });
+                    });
             
         }
         

@@ -10,21 +10,26 @@ public enum RestWriterErrorCode implements ErrorCode {
     /**
      * runtime exception
      */
-    RUNTIME_EXCEPTION("HttpWriter-00", "运行时异常"),
+    RUNTIME_EXCEPTION("RestWriter-00", "运行时异常"),
     /**
      * parameter value is illegal
      */
-    ILLEGAL_VALUE("HttpWriter-01", "您填写的参数值不合法."),
+    ILLEGAL_VALUE("RestWriter-01", "您填写的参数值不合法."),
     /**
      * parameter config error
      */
-    CONFIG_INVALID_EXCEPTION("HttpWriter-02", "您的参数配置错误."),
+    CONFIG_INVALID_EXCEPTION("RestWriter-02", "您的参数配置错误."),
     
-    EMPTY_RECORD_EXCEPTION("HttpWriter-03", "空数据"),
+    EMPTY_RECORD_EXCEPTION("RestWriter-03", "空record数据"),
     
-    FIELD_CLASS_BOT_FOUND_EXCEPTION("HttpWriter-04", "空数据"),
+    EMPTY_FIELD_EXCEPTION("RestWriter-04", "你需要配置至少一个field"),
     
-    URL_INVALID_EXCEPTION("HttpWriter-04", "您填写的URL参数值不合法");
+    FIELD_MISMATCH_WITH_COLUMN_EXCEPTION("RestWriter-05",
+            "field数量与column数量不匹配"),
+    
+    FIELD_CLASS_BOT_FOUND_EXCEPTION("RestWriter-06", "配置的field class不存在"),
+    
+    URL_INVALID_EXCEPTION("RestWriter-07", "您填写的URL参数值不合法");
     
     private final String code;
     private final String description;
