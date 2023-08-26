@@ -1,11 +1,16 @@
 package com.alibaba.datax.plugin.writer.restwriter.validator;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
+import com.alibaba.datax.plugin.writer.restwriter.Field;
+import com.google.common.collect.Sets;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.FIELDS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_HEADERS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
@@ -14,9 +19,13 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriter.DEFAULT_BATCH_SIZE_VALUE;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriter.DEFAULT_MAX_RETRIES_VALUE;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.BATCH_SIZE_INVALID_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMPTY_FIELD_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELDS_INVALID_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.MAX_RETRIES_INVALID_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RATE_PER_TASK_INVALID_EXCEPTION;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * @author: zhangyongxiang
@@ -62,6 +71,28 @@ public class ConfigurationValidator
                     RATE_PER_TASK_INVALID_EXCEPTION,
                     "rate-per-task parameter must be greater than 0");
         }
+        final List<Field> fields = parameter.getListWithJson(FIELDS,
+                Field.class);
+        if (isEmpty(fields)) {
+            throw DataXException.asDataXException(EMPTY_FIELD_EXCEPTION,
+                    "fields parameter must not be empty");
+        }
+        
+        final Set<String> names = Sets.newHashSet();
+        fields.forEach(field -> {
+            if (isBlank(field.getName())) {
+                throw DataXException.asDataXException(FIELDS_INVALID_EXCEPTION,
+                        "field name must not be empty or blank");
+            }
+            if (names.contains(field.getName())) {
+                throw DataXException.asDataXException(FIELDS_INVALID_EXCEPTION,
+                        String.format("field name %s duplicate",
+                                field.getName()));
+            } else {
+                names.add(field.getName());
+            }
+        });
+        
     }
     
     @Override

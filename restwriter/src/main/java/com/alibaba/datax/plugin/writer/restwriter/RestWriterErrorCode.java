@@ -29,7 +29,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     BATCH_SIZE_INVALID_EXCEPTION("RestWriter-08", "您填写的batchSize参数值不合法"),
     
-    MAX_RETRIES_INVALID_EXCEPTION("RestWriter-09", "您填写的maxRetries参数值不合法");
+    MAX_RETRIES_INVALID_EXCEPTION("RestWriter-09", "您填写的maxRetries参数值不合法"),
+    
+    FIELDS_INVALID_EXCEPTION("RestWriter-10", "您填写的fields参数值不合法");
     
     private final String code;
     
