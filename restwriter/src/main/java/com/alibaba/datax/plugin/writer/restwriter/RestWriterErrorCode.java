@@ -31,7 +31,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     MAX_RETRIES_INVALID_EXCEPTION("RestWriter-09", "您填写的maxRetries参数值不合法"),
     
-    FIELDS_INVALID_EXCEPTION("RestWriter-10", "您填写的fields参数值不合法");
+    FIELDS_INVALID_EXCEPTION("RestWriter-10", "您填写的fields参数值不合法"),
+    
+    TYPE_HANDLER_NOT_FOUND_EXCEPTION("RestWriter-11", "没有找到合适的typehandler");
     
     private final String code;
     

@@ -17,6 +17,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMP
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMPTY_RECORD_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELD_CLASS_NOT_FOUND_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELD_MISMATCH_WITH_COLUMN_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.TYPE_HANDLER_NOT_FOUND_EXCEPTION;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
@@ -78,6 +80,13 @@ public class ObjectRecordConverter
                     .get(this.fields.get(num).getName());
             final TypeHandler<?> typeHandler = this.registry
                     .getTypeHandler(column.getType(), clazz);
+            if (isNull(typeHandler)) {
+                throw DataXException.asDataXException(
+                        TYPE_HANDLER_NOT_FOUND_EXCEPTION,
+                        String.format(
+                                "type handler not found for source type %s and target class %s",
+                                column.getType().name(), clazz.getName()));
+            }
             m.put(this.fields.get(num).getName(),
                     typeHandler.convert(column.getRawData()));
         });
