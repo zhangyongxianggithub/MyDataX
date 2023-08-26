@@ -11,6 +11,7 @@ import com.alibaba.datax.plugin.writer.restwriter.handler.string.StringVoidTypeH
 import com.alibaba.datax.plugin.writer.restwriter.handler.typedouble.DoubleVoidTypeHandler;
 import com.alibaba.datax.plugin.writer.restwriter.handler.typeint.IntVoidTypeHandler;
 import com.alibaba.datax.plugin.writer.restwriter.handler.typelong.LongVoidTypeHandler;
+import com.alibaba.datax.plugin.writer.restwriter.handler.typenull.NullVoidTypeHandler;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
@@ -40,22 +41,22 @@ public class TypeHandlerRegistry {
     
     <T> void register(final Column.Type type, final Class<T> targetClass,
             final TypeHandler<T> typeHandler) {
-        handlers.put(type, targetClass, typeHandler);
+        this.handlers.put(type, targetClass, typeHandler);
     }
     
     void registerDefault(final Column.Type type,
             final TypeHandler<Object> typeHandler) {
-        handlers.put(type, Void.class, typeHandler);
+        this.handlers.put(type, Void.class, typeHandler);
     }
     
     <T> boolean hasTypeHandler(final Column.Type type,
             final Class<T> targetClass) {
-        return handlers.contains(type, targetClass);
+        return this.handlers.contains(type, targetClass);
     }
     
     <T> TypeHandler<T> getTypeHandler(final Column.Type type,
             final Class<T> targetClass) {
-        return (TypeHandler<T>) handlers.get(type, targetClass);
+        return (TypeHandler<T>) this.handlers.get(type, targetClass);
     }
     
 }

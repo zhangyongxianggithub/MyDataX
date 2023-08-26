@@ -14,21 +14,21 @@
 				<include>plugin.json</include>
 				<include>plugin_job_template.json</include>
 			</includes>
-			<outputDirectory>plugin/writer/httpjsonwriter</outputDirectory>
+			<outputDirectory>plugin/writer/restwriter</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>target/</directory>
 			<includes>
-				<include>httpjsonwriter-0.0.1-SNAPSHOT.jar</include>
+				<include>restwriter-0.0.1-SNAPSHOT.jar</include>
 			</includes>
-			<outputDirectory>plugin/writer/httpjsonwriter</outputDirectory>
+			<outputDirectory>plugin/writer/restwriter</outputDirectory>
 		</fileSet>
 	</fileSets>
 
 	<dependencySets>
 		<dependencySet>
 			<useProjectArtifact>false</useProjectArtifact>
-			<outputDirectory>plugin/writer/httpjsonwriter/libs</outputDirectory>
+			<outputDirectory>plugin/writer/restwriter/libs</outputDirectory>
 			<scope>runtime</scope>
 		</dependencySet>
 	</dependencySets>

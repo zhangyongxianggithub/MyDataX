@@ -12,35 +12,24 @@
     "content": [
       {
         "reader": {
-          "name": "streamreader",
+          "name": "mysqlreader",
           "parameter": {
-            "column": [
+            "username": "root",
+            "password": "163766",
+            "connection": [
               {
-                "value": "DataX",
-                "type": "string"
-              },
-              {
-                "value": 19890604,
-                "type": "long"
-              },
-              {
-                "value": "1989-06-04 00:00:00",
-                "type": "date"
-              },
-              {
-                "value": true,
-                "type": "bool"
-              },
-              {
-                "value": "test",
-                "type": "bytes"
+                "querySql": [
+                  "select id,job_group,job_id,executor_address,executor_handler,executor_param,executor_sharding_param,executor_fail_retry_count,trigger_time,trigger_code,trigger_msg,handle_time,handle_code,handle_msg,alarm_status from xxl_job_log"
+                ],
+                "jdbcUrl": [
+                  "jdbc:mysql://yuhan.bestzyx.com:3306/xxl_job"
+                ]
               }
-            ],
-            "sliceRecordCount": 100000
+            ]
           }
         },
         "writer": {
-          "name": "httpjsonwriter",
+          "name": "restwriter",
           "parameter": {
             "url": "http://localhost:8080/echo",
             "method": "post",
@@ -56,25 +45,55 @@
             "batchSize": 1000,
             "fields": [
               {
-                "name": "a"
+                "name": "id"
               },
               {
-                "name": "b"
+                "name": "jobGroup"
               },
               {
-                "name": "c",
+                "name": "jobId"
+              },
+              {
+                "name": "executorAddress"
+              },
+              {
+                "name": "executorHandler"
+              },
+              {
+                "name": "executorParam"
+              },
+              {
+                "name": "executorShardingParam"
+              },
+              {
+                "name": "executorFailRetryCount"
+              },
+              {
+                "name": "triggerTime",
                 "type": "java.time.LocalDateTime"
               },
               {
-                "name": "d"
+                "name": "triggerCode"
               },
               {
-                "name": "e"
+                "name": "triggerMsg"
+              },
+              {
+                "name": "handleTime",
+                "type": "java.time.LocalDateTime"
+              },
+              {
+                "name": "handleCode"
+              },
+              {
+                "name": "handleMsg"
+              },
+              {
+                "name": "alarmStatus"
               }
             ],
             "print": true,
-            "failFast": false,
-            "rate-per-task": 10
+            "failFast": false
           }
         }
       }

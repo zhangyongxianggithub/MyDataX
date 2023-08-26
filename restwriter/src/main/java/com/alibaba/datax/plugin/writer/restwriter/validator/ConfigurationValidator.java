@@ -1,8 +1,22 @@
 package com.alibaba.datax.plugin.writer.restwriter.validator;
 
+import java.util.Map;
+
+import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
 
+import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_HEADERS;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriter.DEFAULT_BATCH_SIZE_VALUE;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriter.DEFAULT_MAX_RETRIES_VALUE;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.BATCH_SIZE_INVALID_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.MAX_RETRIES_INVALID_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RATE_PER_TASK_INVALID_EXCEPTION;
+import static java.util.Objects.nonNull;
 
 /**
  * @author: zhangyongxiang
@@ -13,31 +27,41 @@ public class ConfigurationValidator
     
     private final ParameterValidator<String> urlValidator;
     
+    private final ParameterValidator<String> methodValidator;
+    
+    private final ParameterValidator<Map<String, Object>> headersValidator;
+    
     public ConfigurationValidator() {
-        urlValidator = new UrlParameterValidator();
+        this.urlValidator = new UrlParameterValidator();
+        this.methodValidator = new MethodParameterValidator();
+        this.headersValidator = new HeadersParameterValidator();
     }
     
     @Override
     public void validateImmediateValue(final Configuration parameter) {
-        urlValidator.validate(parameter, URL);
-        // final String url = this.originalConfig.getString(URL);
-        //
-        // final String method = this.originalConfig
-        // .getString(HTTP_METHOD);
-        // final boolean ssl = this.originalConfig.getBool(HTTP_SSL,
-        // false);
-        // final Map<String, String> headers = this.originalConfig
-        // .getMap(HTTP_HEADERS, String.class);
-        // final Map<String, Object> query = this.originalConfig
-        // .getMap(HTTP_QUERY);
-        // final int maxRetries = this.originalConfig.getInt(MAX_RETRIES,
-        // 3);
-        // final boolean batchMode = this.originalConfig
-        // .getBool(BATCH_MODE, false);
-        // final int batchSize = this.originalConfig.getInt(BATCH_SIZE,
-        // 1000);
-        // final List<String> fields = this.originalConfig.getList(FIELDS,
-        // String.class);
+        this.urlValidator.validate(parameter, URL);
+        this.methodValidator.validate(parameter, HTTP_METHOD);
+        this.headersValidator.validate(parameter, HTTP_HEADERS);
+        
+        final Integer maxRetries = parameter.getInt(MAX_RETRIES,
+                DEFAULT_MAX_RETRIES_VALUE);
+        
+        if (maxRetries <= 0) {
+            throw DataXException.asDataXException(MAX_RETRIES_INVALID_EXCEPTION,
+                    "maxRetries parameter must be greater than 0");
+        }
+        final Integer batchSize = parameter.getInt(BATCH_SIZE,
+                DEFAULT_BATCH_SIZE_VALUE);
+        if (batchSize <= 0) {
+            throw DataXException.asDataXException(BATCH_SIZE_INVALID_EXCEPTION,
+                    "batchSize parameter must be greater than 0");
+        }
+        final Integer ratePerTask = parameter.getInt(RATE_PER_TASK);
+        if (nonNull(ratePerTask) && ratePerTask <= 0) {
+            throw DataXException.asDataXException(
+                    RATE_PER_TASK_INVALID_EXCEPTION,
+                    "rate-per-task parameter must be greater than 0");
+        }
     }
     
     @Override

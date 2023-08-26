@@ -6,7 +6,10 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.apache.http.HttpException;
 
 import com.alibaba.datax.common.element.Column;
 import com.alibaba.datax.common.element.Record;
@@ -19,8 +22,13 @@ import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandlerRegistry;
 import com.alibaba.datax.plugin.writer.restwriter.validator.ConfigurationValidator;
 import com.google.common.collect.Lists;
 
+import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeExecutor;
+import dev.failsafe.RateLimiter;
+import dev.failsafe.RetryPolicy;
 import kong.unirest.HttpMethod;
 import kong.unirest.HttpResponse;
+import kong.unirest.HttpStatus;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
@@ -41,6 +49,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.TASK_INDEX;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUNTIME_EXCEPTION;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 
 /**
@@ -49,6 +59,18 @@ import static org.apache.commons.collections4.MapUtils.emptyIfNull;
  */
 @Slf4j
 public class RestWriter extends Writer {
+    
+    public static final int DEFAULT_MAX_RETRIES_VALUE = 3;
+    
+    public static final int DEFAULT_BATCH_SIZE_VALUE = 100;
+    
+    public static final boolean DEFAULT_BATCH_MODE_VALUE = false;
+    
+    public static final boolean DEFAULT_PRINT_VALUE = false;
+    
+    public static final boolean DEFAULT_FAIL_FAST_VALUE = false;
+    
+    public static final boolean DEFAULT_SSL_VALUE = false;
     
     @Slf4j
     @EqualsAndHashCode(callSuper = true)
@@ -156,6 +178,8 @@ public class RestWriter extends Writer {
         
         private ObjectRecordConverter converter;
         
+        private FailsafeExecutor<HttpResponse<JsonNode>> executor;
+        
         private Configuration writerSliceConfig;
         
         private Integer taskIndex;
@@ -188,19 +212,26 @@ public class RestWriter extends Writer {
         public void init() {
             this.writerSliceConfig = this.getPluginJobConf();
             this.taskIndex = this.writerSliceConfig.getInt(TASK_INDEX);
-            this.url = this.writerSliceConfig.getString(URL);
+            this.url = this.writerSliceConfig.getString(URL).trim();
             this.method = HttpMethod
                     .valueOf(this.writerSliceConfig.getString(HTTP_METHOD));
-            this.ssl = this.writerSliceConfig.getBool(HTTP_SSL);
-            this.headers = this.writerSliceConfig.getMap(HTTP_HEADERS,
-                    String.class);
-            this.query = this.writerSliceConfig.getMap(HTTP_QUERY);
-            this.maxRetries = this.writerSliceConfig.getInt(MAX_RETRIES, 3);
-            this.batchMode = this.writerSliceConfig.getBool(BATCH_MODE, false);
-            this.batchSize = this.writerSliceConfig.getInt(BATCH_SIZE, 1000);
-            this.fields = this.writerSliceConfig.getList(FIELDS, Field.class);
-            this.print = this.writerSliceConfig.getBool(PRINT, false);
-            this.failFast = this.writerSliceConfig.getBool(FAIL_FAST, true);
+            this.ssl = this.writerSliceConfig.getBool(HTTP_SSL,
+                    DEFAULT_SSL_VALUE);
+            this.headers = emptyIfNull(
+                    this.writerSliceConfig.getMap(HTTP_HEADERS, String.class));
+            this.query = emptyIfNull(this.writerSliceConfig.getMap(HTTP_QUERY));
+            this.maxRetries = this.writerSliceConfig.getInt(MAX_RETRIES,
+                    DEFAULT_MAX_RETRIES_VALUE);
+            this.batchMode = this.writerSliceConfig.getBool(BATCH_MODE,
+                    DEFAULT_BATCH_MODE_VALUE);
+            this.batchSize = this.writerSliceConfig.getInt(BATCH_SIZE,
+                    DEFAULT_BATCH_SIZE_VALUE);
+            this.fields = this.writerSliceConfig.getListWithJson(FIELDS,
+                    Field.class);
+            this.print = this.writerSliceConfig.getBool(PRINT,
+                    DEFAULT_PRINT_VALUE);
+            this.failFast = this.writerSliceConfig.getBool(FAIL_FAST,
+                    DEFAULT_FAIL_FAST_VALUE);
             this.ratePerTask = this.writerSliceConfig.getInt(RATE_PER_TASK);
             log.info(
                     "{} task {} initialized, desc: {}, developer: {}, task conf: {}",
@@ -210,6 +241,13 @@ public class RestWriter extends Writer {
         
         @Override
         public void prepare() {
+            if (this.url.startsWith("http://")) {
+                this.ssl = false;
+            }
+            if (this.url.startsWith("https://")) {
+                this.ssl = true;
+            }
+            
             this.unirest = Unirest.spawnInstance();
             if (!emptyIfNull(this.headers).isEmpty()) {
                 this.headers.forEach(this.unirest.config()::addDefaultHeader);
@@ -217,8 +255,44 @@ public class RestWriter extends Writer {
             this.unirest.config().addShutdownHook(true);
             this.unirest.config().defaultBaseUrl(this.url);
             this.unirest.config().verifySsl(false);
+            this.unirest.config().automaticRetries(false);
+            
             this.converter = new ObjectRecordConverter(
                     new TypeHandlerRegistry(), this.fields);
+            
+            final RetryPolicy<HttpResponse<JsonNode>> retryPolicy = RetryPolicy
+                    .<HttpResponse<JsonNode>>builder()
+                    .handleResultIf(response -> response
+                            .getStatus() >= HttpStatus.BAD_REQUEST)
+                    .onFailedAttempt(e -> log.error(
+                            "write failed, attempt execution times: {},"
+                                    + " possible result response code: {},  possible result response body: {}",
+                            e.getAttemptCount() + 1,
+                            Optional.ofNullable(e.getLastResult())
+                                    .map(HttpResponse::getStatusText)
+                                    .orElse(null),
+                            Optional.ofNullable(e.getLastResult())
+                                    .map(HttpResponse::getBody).orElse(null),
+                            e.getLastException()))
+                    .onRetry(e -> log.warn("failure #{}th retrying.",
+                            e.getAttemptCount()))
+                    .onRetriesExceeded(e -> log.error(
+                            "fail to write. max retries exceeded. cause: {}",
+                            nonNull(e.getException())
+                                    ? e.getException().getMessage()
+                                    : e.getResult().getStatusText(),
+                            e.getException()))
+                    .build();
+            if (isNull(this.ratePerTask)) {
+                this.executor = Failsafe.with(retryPolicy);
+            } else {
+                this.executor = Failsafe
+                        .with(RateLimiter
+                                .<HttpResponse<JsonNode>>smoothBuilder(
+                                        this.maxRetries, Duration.ofSeconds(1))
+                                .withMaxWaitTime(Duration.ofDays(365)).build())
+                        .compose(retryPolicy);
+            }
             this.startTime = System.currentTimeMillis();
             this.successCount = 0;
             this.failCount = 0;
@@ -260,7 +334,9 @@ public class RestWriter extends Writer {
                                 column.getType(),
                                 column.getType().getClass().getName(),
                                 column.getRawData(),
-                                column.getRawData().getClass().getName(),
+                                Optional.ofNullable(column.getRawData())
+                                        .map(Object::getClass)
+                                        .map(Class::getName).orElse(null),
                                 column.getByteSize());
                     }
                 }
@@ -277,14 +353,14 @@ public class RestWriter extends Writer {
             this.endTime = System.currentTimeMillis();
             this.unirest.close();
             log.info(
-                    "job {} task {} execute to end, start from {}, end to {}, total time: {}, count: {}",
+                    "job {} task {} execute to end, start from {}, end to {}, total time: {}, total count: {}, fail count: {}",
                     this.getPluginName(), this.taskIndex,
                     Instant.ofEpochMilli(this.startTime)
                             .atZone(ZoneId.systemDefault()).toLocalDateTime(),
                     Instant.ofEpochMilli(this.endTime)
                             .atZone(ZoneId.systemDefault()).toLocalDateTime(),
                     Duration.ofMillis(this.endTime - this.startTime),
-                    this.successCount);
+                    this.successCount + this.failCount, this.failCount);
             if (this.failCount > 0) {
                 log.error("job {} task {} execute to end, fail count: {}",
                         this.getPluginName(), this.taskIndex, this.failCount);
@@ -299,45 +375,62 @@ public class RestWriter extends Writer {
         }
         
         private void doWrite(final Record item) {
-            final Map<String, Object> body = this.converter.convert(item);
-            this.unirest.request(this.method.name(), "").queryString(this.query)
-                    .body(body).asJson().ifSuccess(response -> {
-                        this.successCount += 1;
-                        log.info(
-                                "the {}th record has been written successfully",
-                                this.successCount);
-                    }).ifFailure(response -> {
-                        this.failCount += 1;
-                        log.error(
-                                "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
-                                response.getStatus(), response.getStatusText(),
-                                response.getBody(), body);
-                        response.getParsingError().ifPresent(e -> {
-                            log.error("parsing exception", e);
-                            log.error("original body: " + e.getOriginalBody());
-                        });
-                    });
+            try {
+                final HttpResponse<JsonNode> resp = this.executor.get(ctx -> {
+                    final Map<String, Object> body = this.converter
+                            .convert(item);
+                    return executeRequest(1, body);
+                });
+                if (resp.getStatus() >= HttpStatus.BAD_REQUEST) {
+                    throw new HttpException(resp.getStatusText());
+                }
+            } catch (final Exception e) {
+                if (this.failFast) {
+                    throw DataXException.asDataXException(RUNTIME_EXCEPTION,
+                            e.getMessage(), e);
+                }
+            }
             
         }
         
         private void doWrite(final List<Record> records) {
-            final List<Map<String, Object>> body = records.stream()
-                    .map(this.converter::convert).collect(Collectors.toList());
-            this.unirest.request(this.method.name(), "").queryString(this.query)
-                    .body(body).asJson().ifSuccess(response -> {
-                        this.successCount += records.size();
+            try {
+                final HttpResponse<JsonNode> resp = this.executor.get(ctx -> {
+                    final List<Map<String, Object>> body = records.stream()
+                            .map(this.converter::convert)
+                            .collect(Collectors.toList());
+                    return executeRequest(records.size(), body);
+                });
+                if (resp.getStatus() >= HttpStatus.BAD_REQUEST) {
+                    throw new HttpException(resp.getStatusText());
+                }
+            } catch (final Exception e) {
+                if (this.failFast) {
+                    throw DataXException.asDataXException(RUNTIME_EXCEPTION,
+                            e.getMessage(), e);
+                }
+            }
+        }
+        
+        private HttpResponse<JsonNode> executeRequest(final int itemCount,
+                final Object body) {
+            return this.unirest.request(this.method.name(), "")
+                    .queryString(this.query).body(body).asJson()
+                    .ifSuccess(response -> {
+                        this.successCount += itemCount;
                         log.info(
                                 "the {}th record has been written successfully",
-                                this.successCount);
+                                this.successCount + this.failCount);
                     }).ifFailure(response -> {
-                        this.failCount += records.size();
+                        this.failCount += itemCount;
                         log.error(
                                 "data write failed, http code: {}, message: {} , optional reason: {},  data info: {} ",
                                 response.getStatus(), response.getStatusText(),
                                 response.getBody(), body);
                         response.getParsingError().ifPresent(e -> {
-                            log.error("parsing exception", e);
-                            log.error("original body: " + e.getOriginalBody());
+                            log.error("original body: {}, parsing exception",
+                                    e.getOriginalBody(), e);
+                            throw e;
                         });
                     });
         }

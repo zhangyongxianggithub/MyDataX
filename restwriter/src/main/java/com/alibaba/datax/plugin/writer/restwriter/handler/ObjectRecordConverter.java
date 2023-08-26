@@ -14,7 +14,8 @@ import com.alibaba.datax.plugin.writer.restwriter.Field;
 import com.google.common.collect.Maps;
 
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMPTY_FIELD_EXCEPTION;
-import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELD_CLASS_BOT_FOUND_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMPTY_RECORD_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELD_CLASS_NOT_FOUND_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.FIELD_MISMATCH_WITH_COLUMN_EXCEPTION;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
@@ -40,17 +41,17 @@ public class ObjectRecordConverter
             fields.forEach(field -> {
                 if (isNotBlank(field.getType())) {
                     try {
-                        fieldClasses.put(field.getName(),
+                        this.fieldClasses.put(field.getName(),
                                 ClassUtils.getClass(field.getType()));
                     } catch (final ClassNotFoundException e) {
                         throw DataXException.asDataXException(
-                                FIELD_CLASS_BOT_FOUND_EXCEPTION,
+                                FIELD_CLASS_NOT_FOUND_EXCEPTION,
                                 String.format("field %s type %s not found",
                                         field.getName(), field.getType()),
                                 e);
                     }
                 } else {
-                    fieldClasses.put(field.getName(), Void.class);
+                    this.fieldClasses.put(field.getName(), Void.class);
                 }
             });
         } else {
@@ -61,7 +62,11 @@ public class ObjectRecordConverter
     
     @Override
     public Map<String, Object> convert(final Record record) {
-        if (fields.size() != record.getColumnNumber()) {
+        if (record.getColumnNumber() <= 0) {
+            throw DataXException.asDataXException(EMPTY_RECORD_EXCEPTION,
+                    "record is empty");
+        }
+        if (this.fields.size() != record.getColumnNumber()) {
             throw DataXException.asDataXException(
                     FIELD_MISMATCH_WITH_COLUMN_EXCEPTION,
                     "number of fields is not same as number of columns of record");
@@ -69,10 +74,11 @@ public class ObjectRecordConverter
         final Map<String, Object> m = Maps.newHashMap();
         IntStream.range(0, record.getColumnNumber()).forEach(num -> {
             final Column column = record.getColumn(num);
-            final Class<?> clazz = fieldClasses.get(fields.get(num).getName());
-            final TypeHandler<?> typeHandler = registry
+            final Class<?> clazz = this.fieldClasses
+                    .get(this.fields.get(num).getName());
+            final TypeHandler<?> typeHandler = this.registry
                     .getTypeHandler(column.getType(), clazz);
-            m.put(fields.get(num).getName(),
+            m.put(this.fields.get(num).getName(),
                     typeHandler.convert(column.getRawData()));
         });
         return m;

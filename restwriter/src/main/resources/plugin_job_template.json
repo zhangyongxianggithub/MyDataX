@@ -3,7 +3,6 @@
   "parameter": {
     "url": "http://localhost:8080/echo",
     "method": "post",
-    "ssl": false,
     "headers": {
       "aaa": "bbbb"
     },
