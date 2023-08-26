@@ -52,6 +52,7 @@ import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUN
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
+import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 
 /**
  * @author zhangyongxiang
@@ -243,9 +244,12 @@ public class RestWriter extends Writer {
         public void prepare() {
             if (this.url.startsWith("http://")) {
                 this.ssl = false;
-            }
-            if (this.url.startsWith("https://")) {
+            } else if (this.url.startsWith("https://")) {
                 this.ssl = true;
+            } else if (this.ssl) {
+                this.url = prependIfMissing(this.url, "https://");
+            } else {
+                this.url = prependIfMissing(this.url, "http://");
             }
             
             this.unirest = Unirest.spawnInstance();
