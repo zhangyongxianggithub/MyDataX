@@ -68,13 +68,13 @@ public class ObjectRecordConverter
             throw DataXException.asDataXException(EMPTY_RECORD_EXCEPTION,
                     "record is empty");
         }
-        if (this.fields.size() != record.getColumnNumber()) {
+        if (this.fields.size() > record.getColumnNumber()) {
             throw DataXException.asDataXException(
                     FIELD_MISMATCH_WITH_COLUMN_EXCEPTION,
-                    "number of fields is not same as number of columns of record");
+                    "number of fields is less than number of columns of record");
         }
         final Map<String, Object> m = Maps.newHashMap();
-        IntStream.range(0, record.getColumnNumber()).forEach(num -> {
+        IntStream.range(0, this.fields.size()).forEach(num -> {
             final Column column = record.getColumn(num);
             final Class<?> clazz = this.fieldClasses
                     .get(this.fields.get(num).getName());

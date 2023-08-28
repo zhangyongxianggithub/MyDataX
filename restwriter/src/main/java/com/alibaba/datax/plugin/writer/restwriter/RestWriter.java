@@ -287,6 +287,7 @@ public class RestWriter extends Writer {
                                     : e.getResult().getStatusText(),
                             e.getException()))
                     .build();
+            // unuseful if request synchronously
             if (isNull(this.ratePerTask)) {
                 this.executor = Failsafe.with(retryPolicy);
             } else {
