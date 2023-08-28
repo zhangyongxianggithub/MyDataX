@@ -293,7 +293,7 @@ public class RestWriter extends Writer {
                 this.executor = Failsafe
                         .with(RateLimiter
                                 .<HttpResponse<JsonNode>>smoothBuilder(
-                                        this.maxRetries, Duration.ofSeconds(1))
+                                        this.ratePerTask, Duration.ofSeconds(1))
                                 .withMaxWaitTime(Duration.ofDays(365)).build())
                         .compose(retryPolicy);
             }
