@@ -66,10 +66,10 @@ public class ConfigurationValidator
                     "batchSize parameter must be greater than 0");
         }
         final Integer ratePerTask = parameter.getInt(RATE_PER_TASK);
-        if (nonNull(ratePerTask) && ratePerTask <= 0) {
+        if (nonNull(ratePerTask) && ratePerTask < 0) {
             throw DataXException.asDataXException(
                     RATE_PER_TASK_INVALID_EXCEPTION,
-                    "rate-per-task parameter must be greater than 0");
+                    "rate-per-task parameter must be greater than or equals 0");
         }
         final List<Field> fields = parameter.getListWithJson(FIELDS,
                 Field.class);

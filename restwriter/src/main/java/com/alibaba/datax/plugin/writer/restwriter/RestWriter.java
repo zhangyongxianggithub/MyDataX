@@ -51,6 +51,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUNTIME_EXCEPTION;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static kong.unirest.ContentType.APPLICATION_JSON;
+import static kong.unirest.HeaderNames.CONTENT_TYPE;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 
@@ -189,7 +191,7 @@ public class RestWriter extends Writer {
         
         private HttpMethod method;
         
-        private Boolean ssl;
+        private boolean ssl;
         
         private Map<String, String> headers;
         
@@ -255,6 +257,10 @@ public class RestWriter extends Writer {
             this.unirest = Unirest.spawnInstance();
             if (!emptyIfNull(this.headers).isEmpty()) {
                 this.headers.forEach(this.unirest.config()::addDefaultHeader);
+            }
+            if (!this.headers.containsKey(CONTENT_TYPE)) {
+                this.unirest.config().addDefaultHeader(CONTENT_TYPE,
+                        APPLICATION_JSON.getMimeType());
             }
             this.unirest.config().addShutdownHook(true);
             this.unirest.config().defaultBaseUrl(this.url);
