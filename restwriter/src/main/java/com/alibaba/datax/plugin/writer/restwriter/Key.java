@@ -28,7 +28,7 @@ public final class Key {
     
     public static final String FIELDS = "fields";
     
-    public static final String PRINT = "print";
+    public static final String DEBUG = "debug";
     
     public static final String FAIL_FAST = "failFast";
     

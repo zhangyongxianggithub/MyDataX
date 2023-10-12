@@ -10,7 +10,7 @@ import org.apache.commons.lang3.ClassUtils;
 import com.alibaba.datax.common.element.Column;
 import com.alibaba.datax.common.element.Record;
 import com.alibaba.datax.common.exception.DataXException;
-import com.alibaba.datax.plugin.writer.restwriter.Field;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
 import com.google.common.collect.Maps;
 
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EMPTY_FIELD_EXCEPTION;

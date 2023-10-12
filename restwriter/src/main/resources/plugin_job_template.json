@@ -30,7 +30,7 @@
         "name": "e"
       }
     ],
-    "print": true,
+    "debug": true,
     "failFast": false,
     "rate-per-task": 10,
     "preprocess": {

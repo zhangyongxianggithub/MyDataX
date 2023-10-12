@@ -6,7 +6,7 @@ import java.util.Set;
 
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
-import com.alibaba.datax.plugin.writer.restwriter.Field;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
 import com.google.common.collect.Sets;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;

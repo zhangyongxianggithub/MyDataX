@@ -17,9 +17,13 @@ import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.plugin.RecordReceiver;
 import com.alibaba.datax.common.spi.Writer;
 import com.alibaba.datax.common.util.Configuration;
+import com.alibaba.datax.plugin.writer.restwriter.conf.ClientConfig;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
 import com.alibaba.datax.plugin.writer.restwriter.handler.ObjectRecordConverter;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandlerRegistry;
 import com.alibaba.datax.plugin.writer.restwriter.validator.ConfigurationValidator;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONException;
 import com.google.common.collect.Lists;
 
 import dev.failsafe.Failsafe;
@@ -37,6 +41,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_MODE;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.CLIENT;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.DEBUG;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.FAIL_FAST;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.FIELDS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_HEADERS;
@@ -44,10 +50,10 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_QUERY;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_SSL;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
-import static com.alibaba.datax.plugin.writer.restwriter.Key.PRINT;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.TASK_INDEX;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.HTTP_CLIENT_CONFIG_INVALID_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUNTIME_EXCEPTION;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -69,7 +75,7 @@ public class RestWriter extends Writer {
     
     public static final boolean DEFAULT_BATCH_MODE_VALUE = false;
     
-    public static final boolean DEFAULT_PRINT_VALUE = false;
+    public static final boolean DEFAULT_DEBUG_VALUE = false;
     
     public static final boolean DEFAULT_FAIL_FAST_VALUE = false;
     
@@ -205,11 +211,15 @@ public class RestWriter extends Writer {
         
         private List<Field> fields;
         
-        private boolean print;
+        private boolean debug;
         
         private boolean failFast;
         
         private Integer ratePerTask;
+        
+        private Duration avgWriteTime;
+        
+        private final ClientConfig clientConfig = new ClientConfig();
         
         @Override
         public void init() {
@@ -231,11 +241,32 @@ public class RestWriter extends Writer {
                     DEFAULT_BATCH_SIZE_VALUE);
             this.fields = this.writerSliceConfig.getListWithJson(FIELDS,
                     Field.class);
-            this.print = this.writerSliceConfig.getBool(PRINT,
-                    DEFAULT_PRINT_VALUE);
+            this.debug = this.writerSliceConfig.getBool(DEBUG,
+                    DEFAULT_DEBUG_VALUE);
             this.failFast = this.writerSliceConfig.getBool(FAIL_FAST,
                     DEFAULT_FAIL_FAST_VALUE);
             this.ratePerTask = this.writerSliceConfig.getInt(RATE_PER_TASK);
+            final Object client = this.writerSliceConfig.get(CLIENT);
+            if (nonNull(client)) {
+                try {
+                    final ClientConfig config = JSON.parseObject(
+                            JSON.toJSONString(client), ClientConfig.class);
+                    if (nonNull(config)) {
+                        if (config.getMaxPerRoute() > 0) {
+                            clientConfig
+                                    .setMaxPerRoute(config.getMaxPerRoute());
+                        }
+                        if (config.getMaxTotal() > 0) {
+                            clientConfig.setMaxTotal(config.getMaxTotal());
+                        }
+                    }
+                } catch (final JSONException e) {
+                    throw DataXException.asDataXException(
+                            HTTP_CLIENT_CONFIG_INVALID_EXCEPTION,
+                            String.format("client config: %s",
+                                    JSON.toJSONString(client)));
+                }
+            }
             log.info(
                     "{} task {} initialized, desc: {}, developer: {}, task conf: {}",
                     this.getPluginName(), this.taskIndex, this.getDescription(),
@@ -266,6 +297,8 @@ public class RestWriter extends Writer {
             this.unirest.config().defaultBaseUrl(this.url);
             this.unirest.config().verifySsl(false);
             this.unirest.config().automaticRetries(false);
+            this.unirest.config().concurrency(clientConfig.getMaxTotal(),
+                    clientConfig.getMaxPerRoute());
             
             this.converter = new ObjectRecordConverter(
                     new TypeHandlerRegistry(), this.fields);
@@ -293,8 +326,7 @@ public class RestWriter extends Writer {
                                     : e.getResult().getStatusText(),
                             e.getException()))
                     .build();
-            // unuseful if request synchronously
-            if (isNull(this.ratePerTask)) {
+            if (isNull(this.ratePerTask) || this.ratePerTask <= 0) {
                 this.executor = Failsafe.with(retryPolicy);
             } else {
                 this.executor = Failsafe
@@ -311,6 +343,7 @@ public class RestWriter extends Writer {
                     "{} task {} prepared, desc: {}, developer: {}, task conf: {}",
                     this.getPluginName(), this.taskIndex, this.getDescription(),
                     this.getDeveloper(), this.writerSliceConfig);
+            log.info("http client config: {}", this.clientConfig);
         }
         
         @Override
@@ -336,7 +369,7 @@ public class RestWriter extends Writer {
                 } else {
                     this.doWrite(recordItem);
                 }
-                if (this.print) {
+                if (this.debug) {
                     final int bound = recordItem.getColumnNumber();
                     for (int index = 0; index < bound; index++) {
                         final Column column = recordItem.getColumn(index);
@@ -364,14 +397,16 @@ public class RestWriter extends Writer {
             this.endTime = System.currentTimeMillis();
             this.unirest.close();
             log.info(
-                    "job {} task {} execute to end, start from {}, end to {}, total time: {}, total count: {}, fail count: {}",
+                    "job {} task {} execute to end, start from {}, end to {}, total time: {}, avg write time: {}, "
+                            + "total count: {}, fail count: {}",
                     this.getPluginName(), this.taskIndex,
                     Instant.ofEpochMilli(this.startTime)
                             .atZone(ZoneId.systemDefault()).toLocalDateTime(),
                     Instant.ofEpochMilli(this.endTime)
                             .atZone(ZoneId.systemDefault()).toLocalDateTime(),
                     Duration.ofMillis(this.endTime - this.startTime),
-                    this.successCount + this.failCount, this.failCount);
+                    this.avgWriteTime, this.successCount + this.failCount,
+                    this.failCount);
             if (this.failCount > 0) {
                 log.error("job {} task {} execute to end, fail count: {}",
                         this.getPluginName(), this.taskIndex, this.failCount);
@@ -425,13 +460,25 @@ public class RestWriter extends Writer {
         
         private HttpResponse<JsonNode> executeRequest(final int itemCount,
                 final Object body) {
+            final long writeStartTime = System.nanoTime();
             return this.unirest.request(this.method.name(), "")
                     .queryString(this.query).body(body).asJson()
                     .ifSuccess(response -> {
                         this.successCount += itemCount;
+                        final long writeEndTime = System.nanoTime();
                         log.info(
-                                "the {}th record has been written successfully",
-                                this.successCount + this.failCount);
+                                "the {}th record has been written successfully, consume time: {}",
+                                this.successCount + this.failCount,
+                                Duration.ofNanos(
+                                        writeEndTime - writeStartTime));
+                        if (isNull(avgWriteTime)) {
+                            avgWriteTime = Duration
+                                    .ofNanos(writeEndTime - writeStartTime);
+                        } else {
+                            avgWriteTime = Duration.ofNanos(
+                                    (avgWriteTime.toNanos() + writeEndTime
+                                            - writeStartTime) / 2);
+                        }
                     }).ifFailure(response -> {
                         this.failCount += itemCount;
                         log.error(
