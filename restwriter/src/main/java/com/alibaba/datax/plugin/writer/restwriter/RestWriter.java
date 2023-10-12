@@ -19,6 +19,7 @@ import com.alibaba.datax.common.spi.Writer;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.restwriter.conf.ClientConfig;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import com.alibaba.datax.plugin.writer.restwriter.handler.ObjectRecordConverter;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandlerRegistry;
 import com.alibaba.datax.plugin.writer.restwriter.validator.ConfigurationValidator;
@@ -50,6 +51,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_QUERY;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_SSL;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.POSTPROCESS;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.PREPROCESS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.TASK_INDEX;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
@@ -91,14 +94,28 @@ public class RestWriter extends Writer {
         
         private long endTime;
         
+        private Process preprocess;
+        
+        private Process postprocess;
+        
         @Override
         public void init() {
             this.originalConfig = super.getPluginJobConf();
             this.validateParameter();
+            this.preprocess = parseProcess(this.originalConfig, PREPROCESS);
+            this.postprocess = parseProcess(this.originalConfig, POSTPROCESS);
             log.info(
                     "{} job initialized, desc: {}, developer: {}, job conf: {}",
                     this.getPluginName(), this.getDescription(),
                     this.getDeveloper(), this.getPluginJobConf());
+        }
+        
+        private Process parseProcess(final Configuration jobConfiguration,
+                final String processKey) {
+            final Configuration configuration = jobConfiguration
+                    .getConfiguration(processKey);
+            
+            return null;
         }
         
         private void validateParameter() {
