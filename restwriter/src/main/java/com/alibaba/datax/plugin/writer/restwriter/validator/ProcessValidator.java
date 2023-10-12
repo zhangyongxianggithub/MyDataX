@@ -10,6 +10,7 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_CONCURRE
 import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_OPERATIONS;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.CONCURRENT_INVALID_EXCEPTION;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.collections4.ListUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
 
 /**
@@ -44,7 +45,7 @@ public class ProcessValidator implements ParameterValidator<Configuration> {
             }
             List<Operation> operations = parameter
                     .getListWithJson(ADDITIONAL_OPERATIONS, Operation.class);
-            operations.forEach(operation -> {
+            emptyIfNull(operations).forEach(operation -> {
                 this.urlValidator.validateImmediateValue(operation.getUrl());
                 this.methodValidator
                         .validateImmediateValue(operation.getMethod());
