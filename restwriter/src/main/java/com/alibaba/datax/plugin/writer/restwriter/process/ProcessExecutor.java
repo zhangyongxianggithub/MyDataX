@@ -19,6 +19,7 @@ import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.POSTPROCESS_OPERATION_ERROR;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.PREPROCESS_OPERATION_ERROR;
 import static java.util.Objects.nonNull;
 import static kong.unirest.ContentType.APPLICATION_JSON;
@@ -37,22 +38,26 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 @Slf4j
 public class ProcessExecutor {
     
-    private static final UnirestInstance UNIREST;
+    private final UnirestInstance unirest;
     
-    private static final Executor executor = Executors
-            .newWorkStealingPool(Runtime.getRuntime().availableProcessors());
+    private final Executor executor;
     
-    static {
-        UNIREST = Unirest.spawnInstance();
-        UNIREST.config().addShutdownHook(true);
-        UNIREST.config().verifySsl(false);
-        UNIREST.config().automaticRetries(true);
-        UNIREST.config().connectTimeout((int) Duration.ofHours(1).toMillis());
-        UNIREST.config().socketTimeout((int) Duration.ofHours(1).toMillis());
+    public ProcessExecutor() {
+        this(Executors.newWorkStealingPool(
+                Runtime.getRuntime().availableProcessors()));
     }
     
-    public static void execute(final Process process,
-            final ProcessCategory category) {
+    public ProcessExecutor(final Executor executor) {
+        this.executor = executor;
+        this.unirest = Unirest.spawnInstance();
+        unirest.config().addShutdownHook(true);
+        unirest.config().verifySsl(false);
+        unirest.config().automaticRetries(true);
+        unirest.config().connectTimeout((int) Duration.ofHours(1).toMillis());
+        unirest.config().socketTimeout((int) Duration.ofHours(1).toMillis());
+    }
+    
+    public void execute(final Process process, final ProcessCategory category) {
         if (nonNull(process) && isNotEmpty(process.getOperations())) {
             if (process.isConcurrent()) {
                 CompletableFuture
@@ -62,9 +67,15 @@ public class ProcessExecutor {
                                         executor))
                                 .toArray(CompletableFuture[]::new))
                         .exceptionally(e -> {
-                            throw DataXException.asDataXException(
-                                    PREPROCESS_OPERATION_ERROR, e.getMessage(),
-                                    e);
+                            if (category == ProcessCategory.PREPROCESS) {
+                                throw DataXException.asDataXException(
+                                        PREPROCESS_OPERATION_ERROR,
+                                        e.getMessage(), e);
+                            } else {
+                                throw DataXException.asDataXException(
+                                        POSTPROCESS_OPERATION_ERROR,
+                                        e.getMessage(), e);
+                            }
                         }).join();
             } else {
                 process.getOperations()
@@ -73,9 +84,9 @@ public class ProcessExecutor {
         }
     }
     
-    public static void execute(final Operation operation,
+    public void execute(final Operation operation,
             final ProcessCategory category) {
-        HttpRequestWithBody requestBuilder = UNIREST
+        HttpRequestWithBody requestBuilder = unirest
                 .request(operation.getMethod(), operation.getUrl());
         if (MapUtils.isNotEmpty(operation.getHeaders())) {
             for (final String header : operation.getHeaders().keySet()) {
@@ -84,7 +95,7 @@ public class ProcessExecutor {
             }
         }
         if (emptyIfNull(operation.getHeaders()).containsKey(CONTENT_TYPE)) {
-            UNIREST.config().addDefaultHeader(CONTENT_TYPE,
+            unirest.config().addDefaultHeader(CONTENT_TYPE,
                     APPLICATION_JSON.getMimeType());
         }
         HttpRequest<?> request = requestBuilder;

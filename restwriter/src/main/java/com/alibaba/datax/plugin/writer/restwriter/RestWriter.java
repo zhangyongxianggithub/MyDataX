@@ -104,6 +104,8 @@ public class RestWriter extends Writer {
         
         private Process postprocess;
         
+        private final ProcessExecutor processExecutor = new ProcessExecutor();
+        
         @Override
         public void init() {
             this.originalConfig = super.getPluginJobConf();
@@ -155,7 +157,8 @@ public class RestWriter extends Writer {
             
             if (nonNull(preprocess)
                     && CollectionUtils.isNotEmpty(preprocess.getOperations())) {
-                ProcessExecutor.execute(preprocess, ProcessCategory.PREPROCESS);
+                this.processExecutor.execute(preprocess,
+                        ProcessCategory.PREPROCESS);
                 log.info(
                         "{} job prepared successfully after preprocess, job conf: {}, preprocess: {}",
                         this.getPluginName(), this.originalConfig, preprocess);
@@ -196,7 +199,7 @@ public class RestWriter extends Writer {
             
             if (nonNull(postprocess) && CollectionUtils
                     .isNotEmpty(postprocess.getOperations())) {
-                ProcessExecutor.execute(postprocess,
+                this.processExecutor.execute(postprocess,
                         ProcessCategory.POSTPROCESS);
                 log.info(
                         "{} postprocess execute successfully,  postprocess: {}",

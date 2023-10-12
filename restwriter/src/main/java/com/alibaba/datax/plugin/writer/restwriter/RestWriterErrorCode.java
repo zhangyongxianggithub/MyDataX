@@ -37,7 +37,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     HTTP_CLIENT_CONFIG_INVALID_EXCEPTION("RestWriter-12", "http client配置不合法"),
     
-    PREPROCESS_OPERATION_ERROR("RestWriter-13", "预/后处理失败");
+    PREPROCESS_OPERATION_ERROR("RestWriter-13", "预处理失败"),
+    
+    POSTPROCESS_OPERATION_ERROR("RestWriter-14", "后处理失败");
     
     private final String code;
     
