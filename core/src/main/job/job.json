@@ -95,7 +95,7 @@
             "debug": true,
             "failFast": false,
             "preprocess": {
-              "concurrent": true,
+              "concurrent": "true",
               "operations": [
                 {
                   "url": "http://localhost:8080/echo/preprocess/get",

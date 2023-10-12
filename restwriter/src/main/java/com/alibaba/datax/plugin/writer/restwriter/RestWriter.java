@@ -104,7 +104,7 @@ public class RestWriter extends Writer {
         
         private Process postprocess;
         
-        private final ProcessExecutor processExecutor = new ProcessExecutor();
+        private ProcessExecutor processExecutor;
         
         @Override
         public void init() {
@@ -112,6 +112,7 @@ public class RestWriter extends Writer {
             this.validateParameter();
             this.preprocess = parseProcess(this.originalConfig, PREPROCESS);
             this.postprocess = parseProcess(this.originalConfig, POSTPROCESS);
+            this.processExecutor = new ProcessExecutor();
             log.info(
                     "{} job initialized, desc: {}, developer: {}, job conf: {}, job preprocess: {}, job postprocess: {}",
                     this.getPluginName(), this.getDescription(),

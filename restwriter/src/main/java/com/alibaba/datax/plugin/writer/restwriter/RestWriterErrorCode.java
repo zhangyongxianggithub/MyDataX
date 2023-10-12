@@ -39,7 +39,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     PREPROCESS_OPERATION_ERROR("RestWriter-13", "预处理失败"),
     
-    POSTPROCESS_OPERATION_ERROR("RestWriter-14", "后处理失败");
+    POSTPROCESS_OPERATION_ERROR("RestWriter-14", "后处理失败"),
+    
+    CONCURRENT_INVALID_EXCEPTION("RestWriter-15", "并发参数不合法");
     
     private final String code;
     

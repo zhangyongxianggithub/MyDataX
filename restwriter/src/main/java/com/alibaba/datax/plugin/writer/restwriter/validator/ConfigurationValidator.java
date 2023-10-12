@@ -7,7 +7,6 @@ import java.util.Set;
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
-import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import com.google.common.collect.Sets;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
@@ -43,7 +42,7 @@ public class ConfigurationValidator
     
     private final ParameterValidator<Map<String, Object>> headersValidator;
     
-    private final ParameterValidator<Process> processValidator;
+    private final ParameterValidator<Configuration> processValidator;
     
     public ConfigurationValidator() {
         this.urlValidator = new UrlParameterValidator();
