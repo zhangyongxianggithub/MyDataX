@@ -33,7 +33,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     FIELDS_INVALID_EXCEPTION("RestWriter-10", "您填写的fields参数值不合法"),
     
-    TYPE_HANDLER_NOT_FOUND_EXCEPTION("RestWriter-11", "没有找到合适的typehandler");
+    TYPE_HANDLER_NOT_FOUND_EXCEPTION("RestWriter-11", "没有找到合适的typehandler"),
+    
+    HTTP_CLIENT_CONFIG_INVALID_EXCEPTION("RestWriter-12", "http client配置不合法");
     
     private final String code;
     

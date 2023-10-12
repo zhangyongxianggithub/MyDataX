@@ -32,6 +32,52 @@
     ],
     "print": true,
     "failFast": false,
-    "rate-per-task": 10
+    "rate-per-task": 10,
+    "preprocess": {
+      "concurrent": true,
+      "operations": [
+        {
+          "url": "http://localhost:8080/echo",
+          "method": "post",
+          "headers": {
+            "aaa": "bbbb"
+          },
+          "body": "",
+          "debug": false
+        },
+        {
+          "url": "http://localhost:8080/echo",
+          "method": "post",
+          "headers": {
+            "aaa": "bbbb"
+          },
+          "body": "",
+          "debug": false
+        }
+      ]
+    },
+    "postprocess": {
+      "concurrent": true,
+      "operations": [
+        {
+          "url": "http://localhost:8080/echo",
+          "method": "post",
+          "headers": {
+            "aaa": "bbbb"
+          },
+          "body": "",
+          "debug": false
+        },
+        {
+          "url": "http://localhost:8080/echo",
+          "method": "post",
+          "headers": {
+            "aaa": "bbbb"
+          },
+          "body": "",
+          "debug": false
+        }
+      ]
+    }
   }
 }

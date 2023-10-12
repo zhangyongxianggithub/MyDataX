@@ -33,4 +33,10 @@ public final class Key {
     public static final String FAIL_FAST = "failFast";
     
     public static final String RATE_PER_TASK = "rate-per-task";
+    
+    public static final String CLIENT = "client";
+    
+    public static final String PREPROCESS = "preprocess";
+    
+    public static final String POSTPROCESS = "postprocess";
 }
