@@ -2,6 +2,8 @@ package com.alibaba.datax.plugin.writer.restwriter.conf;
 
 import java.util.Map;
 
+import com.google.common.collect.Maps;
+
 import lombok.Data;
 
 /**
@@ -15,7 +17,7 @@ public class Operation {
     
     private String method;
     
-    private Map<String, String> headers;
+    private Map<String, String> headers = Maps.newHashMap();
     
     private String body;
     

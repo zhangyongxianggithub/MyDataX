@@ -1,9 +1,13 @@
 package com.alibaba.datax.plugin.writer.restwriter.validator;
 
+import java.util.List;
+
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_CONCURRENT;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_OPERATIONS;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.CONCURRENT_INVALID_EXCEPTION;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
@@ -14,6 +18,16 @@ import static org.apache.commons.lang3.StringUtils.equalsIgnoreCase;
  **/
 
 public class ProcessValidator implements ParameterValidator<Configuration> {
+    
+    private final ParameterValidator<String> urlValidator;
+    
+    private final ParameterValidator<String> methodValidator;
+    
+    public ProcessValidator(ParameterValidator<String> urlValidator,
+            ParameterValidator<String> methodValidator) {
+        this.urlValidator = urlValidator;
+        this.methodValidator = methodValidator;
+    }
     
     @Override
     public void validateImmediateValue(final Configuration parameter) {
@@ -28,8 +42,13 @@ public class ProcessValidator implements ParameterValidator<Configuration> {
                                 "parameter concurrent %s is invalid, allow values: true,false",
                                 concurrent));
             }
-            // parameter.getListWithJson(ADDITIONAL_OPERATIONS,
-            // Operation.class);
+            List<Operation> operations = parameter
+                    .getListWithJson(ADDITIONAL_OPERATIONS, Operation.class);
+            operations.forEach(operation -> {
+                this.urlValidator.validateImmediateValue(operation.getUrl());
+                this.methodValidator
+                        .validateImmediateValue(operation.getMethod());
+            });
         }
     }
     

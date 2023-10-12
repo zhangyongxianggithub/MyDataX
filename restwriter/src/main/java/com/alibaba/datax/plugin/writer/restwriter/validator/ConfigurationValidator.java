@@ -48,7 +48,8 @@ public class ConfigurationValidator
         this.urlValidator = new UrlParameterValidator();
         this.methodValidator = new MethodParameterValidator();
         this.headersValidator = new HeadersParameterValidator();
-        this.processValidator = new ProcessValidator();
+        this.processValidator = new ProcessValidator(this.urlValidator,
+                this.methodValidator);
     }
     
     @Override
