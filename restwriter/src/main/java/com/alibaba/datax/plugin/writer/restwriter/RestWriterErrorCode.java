@@ -35,7 +35,9 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     TYPE_HANDLER_NOT_FOUND_EXCEPTION("RestWriter-11", "没有找到合适的typehandler"),
     
-    HTTP_CLIENT_CONFIG_INVALID_EXCEPTION("RestWriter-12", "http client配置不合法");
+    HTTP_CLIENT_CONFIG_INVALID_EXCEPTION("RestWriter-12", "http client配置不合法"),
+    
+    PREPROCESS_OPERATION_ERROR("RestWriter-13", "预/后处理失败");
     
     private final String code;
     

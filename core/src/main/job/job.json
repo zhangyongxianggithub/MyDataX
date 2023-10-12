@@ -22,7 +22,7 @@
                   "select id,job_group,job_id,executor_address,executor_handler,executor_param,executor_sharding_param,executor_fail_retry_count,trigger_time,trigger_code,trigger_msg,handle_time,handle_code,handle_msg,alarm_status from xxl_job_log"
                 ],
                 "jdbcUrl": [
-                  "jdbc:mysql://yuhan.bestzyx.com:3306/xxl_job"
+                  "jdbc:mysql://yuhan.bestzyx.com:3306/xxl_job?useSSL=false"
                 ]
               }
             ]
@@ -92,8 +92,33 @@
                 "name": "alarmStatus"
               }
             ],
-            "print": true,
-            "failFast": false
+            "debug": true,
+            "failFast": false,
+            "preprocess": {
+              "concurrent": true,
+              "operations": [
+                {
+                  "url": "http://localhost:8080/echo/preprocess/get",
+                  "method": "get",
+                  "headers": {
+                    "aaa": "bbbb"
+                  },
+                  "body": "aaaaaaaa",
+                  "debug": true,
+                  "base64": true
+                },
+                {
+                  "url": "http://localhost:8080/echo/preprocess/post",
+                  "method": "post",
+                  "headers": {
+                    "aaa": "bbbb"
+                  },
+                  "body": "5byg5rC456Wl",
+                  "debug": false,
+                  "base64": true
+                }
+              ]
+            }
           }
         }
       }

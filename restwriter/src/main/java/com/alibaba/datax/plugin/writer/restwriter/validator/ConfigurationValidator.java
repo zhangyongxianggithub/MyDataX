@@ -7,6 +7,7 @@ import java.util.Set;
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import com.google.common.collect.Sets;
 
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
@@ -14,6 +15,8 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.FIELDS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_HEADERS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.POSTPROCESS;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.PREPROCESS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriter.DEFAULT_BATCH_SIZE_VALUE;
@@ -40,10 +43,13 @@ public class ConfigurationValidator
     
     private final ParameterValidator<Map<String, Object>> headersValidator;
     
+    private final ParameterValidator<Process> processValidator;
+    
     public ConfigurationValidator() {
         this.urlValidator = new UrlParameterValidator();
         this.methodValidator = new MethodParameterValidator();
         this.headersValidator = new HeadersParameterValidator();
+        this.processValidator = new ProcessValidator();
     }
     
     @Override
@@ -92,6 +98,9 @@ public class ConfigurationValidator
                 names.add(field.getName());
             }
         });
+        
+        this.processValidator.validate(parameter, PREPROCESS);
+        this.processValidator.validate(parameter, POSTPROCESS);
         
     }
     

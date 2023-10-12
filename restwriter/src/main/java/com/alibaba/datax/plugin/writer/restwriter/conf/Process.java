@@ -17,4 +17,10 @@ public class Process {
     private boolean concurrent;
     
     private List<Operation> operations = Lists.newArrayList();
+
+    public void execute() {
+
+
+        
+    }
 }

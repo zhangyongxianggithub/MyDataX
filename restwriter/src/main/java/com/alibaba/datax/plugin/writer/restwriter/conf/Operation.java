@@ -19,6 +19,8 @@ public class Operation {
     
     private String body;
     
+    private boolean base64;
+    
     private boolean debug;
     
 }

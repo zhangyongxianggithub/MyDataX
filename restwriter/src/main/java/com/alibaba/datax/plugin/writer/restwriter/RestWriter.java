@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.http.HttpException;
 
 import com.alibaba.datax.common.element.Column;
@@ -19,9 +20,12 @@ import com.alibaba.datax.common.spi.Writer;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.restwriter.conf.ClientConfig;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
+import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import com.alibaba.datax.plugin.writer.restwriter.handler.ObjectRecordConverter;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandlerRegistry;
+import com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory;
+import com.alibaba.datax.plugin.writer.restwriter.process.ProcessExecutor;
 import com.alibaba.datax.plugin.writer.restwriter.validator.ConfigurationValidator;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
@@ -40,6 +44,8 @@ import kong.unirest.UnirestInstance;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_CONCURRENT;
+import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_OPERATIONS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_MODE;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.CLIENT;
@@ -105,17 +111,25 @@ public class RestWriter extends Writer {
             this.preprocess = parseProcess(this.originalConfig, PREPROCESS);
             this.postprocess = parseProcess(this.originalConfig, POSTPROCESS);
             log.info(
-                    "{} job initialized, desc: {}, developer: {}, job conf: {}",
+                    "{} job initialized, desc: {}, developer: {}, job conf: {}, job preprocess: {}, job postprocess: {}",
                     this.getPluginName(), this.getDescription(),
-                    this.getDeveloper(), this.getPluginJobConf());
+                    this.getDeveloper(), this.getPluginJobConf(), preprocess,
+                    postprocess);
         }
         
         private Process parseProcess(final Configuration jobConfiguration,
                 final String processKey) {
-            final Configuration configuration = jobConfiguration
+            final Process process = new Process();
+            final Configuration conf = jobConfiguration
                     .getConfiguration(processKey);
-            
-            return null;
+            log.info("job configuration key: {}, conf: {}", processKey, conf);
+            if (nonNull(conf)) {
+                process.setConcurrent(
+                        conf.getBool(ADDITIONAL_CONCURRENT, false));
+                process.setOperations(conf.getListWithJson(
+                        ADDITIONAL_OPERATIONS, Operation.class));
+            }
+            return process;
         }
         
         private void validateParameter() {
@@ -131,7 +145,6 @@ public class RestWriter extends Writer {
         
         @Override
         public void preCheck() {
-            
             log.info("job {} pre check will not be called",
                     this.getPluginName());
         }
@@ -139,8 +152,18 @@ public class RestWriter extends Writer {
         @Override
         public void prepare() {
             this.startTime = System.currentTimeMillis();
-            log.info("{} job prepared, job conf: {}", this.getPluginName(),
-                    this.originalConfig);
+            
+            if (nonNull(preprocess)
+                    && CollectionUtils.isNotEmpty(preprocess.getOperations())) {
+                ProcessExecutor.execute(preprocess, ProcessCategory.PREPROCESS);
+                log.info(
+                        "{} job prepared successfully after preprocess, job conf: {}, preprocess: {}",
+                        this.getPluginName(), this.originalConfig, preprocess);
+            } else {
+                log.info(
+                        "{} job prepared without need any of preprocess, job conf: {}",
+                        this.getPluginName(), this.originalConfig);
+            }
         }
         
         @Override
@@ -170,6 +193,16 @@ public class RestWriter extends Writer {
         @Override
         public void post() {
             this.endTime = System.currentTimeMillis();
+            
+            if (nonNull(postprocess) && CollectionUtils
+                    .isNotEmpty(postprocess.getOperations())) {
+                ProcessExecutor.execute(postprocess,
+                        ProcessCategory.POSTPROCESS);
+                log.info(
+                        "{} postprocess execute successfully,  postprocess: {}",
+                        this.getPluginName(), preprocess);
+            }
+            
             log.info(
                     "job {} execute to end, start from {}, end to {}, total time: {}",
                     this.getPluginName(),
@@ -178,7 +211,6 @@ public class RestWriter extends Writer {
                     Instant.ofEpochMilli(this.endTime)
                             .atZone(ZoneId.systemDefault()).toLocalDateTime(),
                     Duration.ofMillis(this.endTime - this.startTime));
-            
         }
         
         @Override
@@ -391,7 +423,7 @@ public class RestWriter extends Writer {
                     for (int index = 0; index < bound; index++) {
                         final Column column = recordItem.getColumn(index);
                         log.info(
-                                "colum type: {} column type class: {}, raw data: {}, raw data class: {}, byte size: {}",
+                                "colum type: {}, column type class: {}, raw data: {}, raw data class: {}, byte size: {}",
                                 column.getType(),
                                 column.getType().getClass().getName(),
                                 column.getRawData(),

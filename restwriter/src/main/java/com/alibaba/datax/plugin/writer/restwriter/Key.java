@@ -40,14 +40,8 @@ public final class Key {
     
     public static final String POSTPROCESS = "postprocess";
     
-    public static final String ADDITIONAL_PROCESS_URL = "url";
+    public static final String ADDITIONAL_CONCURRENT = "concurrent";
     
-    public static final String ADDITIONAL_PROCESS_HTTP_METHOD = "method";
-    
-    public static final String ADDITIONAL_PROCESS_HTTP_HEADERS = "headers";
-    
-    public static final String ADDITIONAL_PROCESS_HTTP_BODY = "body";
-    
-    public static final String ADDITIONAL_PROCESS_DEBUG = "debug";
+    public static final String ADDITIONAL_OPERATIONS = "operations";
     
 }
