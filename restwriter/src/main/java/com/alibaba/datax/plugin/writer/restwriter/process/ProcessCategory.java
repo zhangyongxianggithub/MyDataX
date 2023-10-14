@@ -1,13 +1,29 @@
 package com.alibaba.datax.plugin.writer.restwriter.process;
 
+import com.alibaba.datax.plugin.writer.restwriter.Key;
+
+import lombok.Getter;
+
 /**
- * @version 1.0
  * @name: zhangyongxiang
  * @author: zhangyongxiang@baidu.com
- * @date 2023/10/12 15:40
- * @description:
  **/
 
+@Getter
 public enum ProcessCategory {
-    PREPROCESS, POSTPROCESS
+    /**
+     * pre processing
+     */
+    PREPROCESS(Key.PREPROCESS),
+    /**
+     * post processing
+     */
+    POSTPROCESS(Key.POSTPROCESS);
+    
+    private String key;
+    
+    ProcessCategory(final String key) {
+        this.key = key;
+    }
+    
 }

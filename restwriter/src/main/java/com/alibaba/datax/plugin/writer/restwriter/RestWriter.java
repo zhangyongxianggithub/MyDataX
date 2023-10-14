@@ -57,13 +57,13 @@ import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_METHOD;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_QUERY;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.HTTP_SSL;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.MAX_RETRIES;
-import static com.alibaba.datax.plugin.writer.restwriter.Key.POSTPROCESS;
-import static com.alibaba.datax.plugin.writer.restwriter.Key.PREPROCESS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.RATE_PER_TASK;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.TASK_INDEX;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.URL;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.HTTP_CLIENT_CONFIG_INVALID_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.RUNTIME_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory.POSTPROCESS;
+import static com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory.PREPROCESS;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static kong.unirest.ContentType.APPLICATION_JSON;
@@ -116,16 +116,17 @@ public class RestWriter extends Writer {
             log.info(
                     "{} job initialized, desc: {}, developer: {}, job conf: {}, job preprocess: {}, job postprocess: {}",
                     this.getPluginName(), this.getDescription(),
-                    this.getDeveloper(), this.getPluginJobConf(), preprocess,
-                    postprocess);
+                    this.getDeveloper(), this.getPluginJobConf(),
+                    this.preprocess, this.postprocess);
         }
         
         private Process parseProcess(final Configuration jobConfiguration,
-                final String processKey) {
-            final Process process = new Process();
+                final ProcessCategory category) {
+            final Process process = new Process(category);
             final Configuration conf = jobConfiguration
-                    .getConfiguration(processKey);
-            log.info("job configuration key: {}, conf: {}", processKey, conf);
+                    .getConfiguration(category.getKey());
+            log.info("process configuration, category: {}, conf: {}", category,
+                    conf);
             if (nonNull(conf)) {
                 process.setConcurrent(
                         conf.getBool(ADDITIONAL_CONCURRENT, false));
@@ -156,13 +157,13 @@ public class RestWriter extends Writer {
         public void prepare() {
             this.startTime = System.currentTimeMillis();
             
-            if (nonNull(preprocess)
-                    && CollectionUtils.isNotEmpty(preprocess.getOperations())) {
-                this.processExecutor.execute(preprocess,
-                        ProcessCategory.PREPROCESS);
+            if (nonNull(this.preprocess) && CollectionUtils
+                    .isNotEmpty(this.preprocess.getOperations())) {
+                this.processExecutor.execute(this.preprocess);
                 log.info(
                         "{} job prepared successfully after preprocess, job conf: {}, preprocess: {}",
-                        this.getPluginName(), this.originalConfig, preprocess);
+                        this.getPluginName(), this.originalConfig,
+                        this.preprocess);
             } else {
                 log.info(
                         "{} job prepared without need any of preprocess, job conf: {}",
@@ -198,13 +199,12 @@ public class RestWriter extends Writer {
         public void post() {
             this.endTime = System.currentTimeMillis();
             
-            if (nonNull(postprocess) && CollectionUtils
-                    .isNotEmpty(postprocess.getOperations())) {
-                this.processExecutor.execute(postprocess,
-                        ProcessCategory.POSTPROCESS);
+            if (nonNull(this.postprocess) && CollectionUtils
+                    .isNotEmpty(this.postprocess.getOperations())) {
+                this.processExecutor.execute(this.postprocess);
                 log.info(
                         "{} postprocess execute successfully,  postprocess: {}",
-                        this.getPluginName(), preprocess);
+                        this.getPluginName(), this.preprocess);
             }
             
             log.info(
@@ -306,11 +306,11 @@ public class RestWriter extends Writer {
                             JSON.toJSONString(client), ClientConfig.class);
                     if (nonNull(config)) {
                         if (config.getMaxPerRoute() > 0) {
-                            clientConfig
+                            this.clientConfig
                                     .setMaxPerRoute(config.getMaxPerRoute());
                         }
                         if (config.getMaxTotal() > 0) {
-                            clientConfig.setMaxTotal(config.getMaxTotal());
+                            this.clientConfig.setMaxTotal(config.getMaxTotal());
                         }
                     }
                 } catch (final JSONException e) {
@@ -350,8 +350,8 @@ public class RestWriter extends Writer {
             this.unirest.config().defaultBaseUrl(this.url);
             this.unirest.config().verifySsl(false);
             this.unirest.config().automaticRetries(false);
-            this.unirest.config().concurrency(clientConfig.getMaxTotal(),
-                    clientConfig.getMaxPerRoute());
+            this.unirest.config().concurrency(this.clientConfig.getMaxTotal(),
+                    this.clientConfig.getMaxPerRoute());
             
             this.converter = new ObjectRecordConverter(
                     new TypeHandlerRegistry(), this.fields);
@@ -524,12 +524,12 @@ public class RestWriter extends Writer {
                                 this.successCount + this.failCount,
                                 Duration.ofNanos(
                                         writeEndTime - writeStartTime));
-                        if (isNull(avgWriteTime)) {
-                            avgWriteTime = Duration
+                        if (isNull(this.avgWriteTime)) {
+                            this.avgWriteTime = Duration
                                     .ofNanos(writeEndTime - writeStartTime);
                         } else {
-                            avgWriteTime = Duration.ofNanos(
-                                    (avgWriteTime.toNanos() + writeEndTime
+                            this.avgWriteTime = Duration.ofNanos(
+                                    (this.avgWriteTime.toNanos() + writeEndTime
                                             - writeStartTime) / 2);
                         }
                     }).ifFailure(response -> {

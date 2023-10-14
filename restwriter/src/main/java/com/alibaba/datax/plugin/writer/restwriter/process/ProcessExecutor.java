@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.POSTPROCESS_OPERATION_ERROR;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.PREPROCESS_OPERATION_ERROR;
 import static java.util.Objects.nonNull;
+import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 import static kong.unirest.ContentType.APPLICATION_JSON;
 import static kong.unirest.HeaderNames.CONTENT_TYPE;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -29,11 +30,8 @@ import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
- * @version 1.0
  * @name: zhangyongxiang
  * @author: zhangyongxiang@baidu.com
- * @date 2023/10/12 15:01
- * @description:
  **/
 @Slf4j
 public class ProcessExecutor {
@@ -43,31 +41,35 @@ public class ProcessExecutor {
     private final Executor executor;
     
     public ProcessExecutor() {
-        this(Executors.newWorkStealingPool(
-                Runtime.getRuntime().availableProcessors()));
+        this(new ForkJoinPool(Runtime.getRuntime().availableProcessors(),
+                defaultForkJoinWorkerThreadFactory, null, true));
     }
     
     public ProcessExecutor(final Executor executor) {
         this.executor = executor;
         this.unirest = Unirest.spawnInstance();
-        unirest.config().addShutdownHook(true);
-        unirest.config().verifySsl(false);
-        unirest.config().automaticRetries(true);
-        unirest.config().connectTimeout((int) Duration.ofHours(1).toMillis());
-        unirest.config().socketTimeout((int) Duration.ofHours(1).toMillis());
+        this.unirest.config().addShutdownHook(true);
+        this.unirest.config().verifySsl(false);
+        this.unirest.config().automaticRetries(true);
+        this.unirest.config()
+                .connectTimeout((int) Duration.ofHours(1).toMillis());
+        this.unirest.config()
+                .socketTimeout((int) Duration.ofHours(1).toMillis());
     }
     
-    public void execute(final Process process, final ProcessCategory category) {
+    public void execute(final Process process) {
         if (nonNull(process) && isNotEmpty(process.getOperations())) {
             if (process.isConcurrent()) {
                 CompletableFuture
                         .allOf(process.getOperations().stream()
                                 .map(operation -> CompletableFuture.runAsync(
-                                        () -> execute(operation, category),
-                                        executor))
+                                        () -> execute(operation,
+                                                process.getCategory()),
+                                        this.executor))
                                 .toArray(CompletableFuture[]::new))
                         .exceptionally(e -> {
-                            if (category == ProcessCategory.PREPROCESS) {
+                            if (process
+                                    .getCategory() == ProcessCategory.PREPROCESS) {
                                 throw DataXException.asDataXException(
                                         PREPROCESS_OPERATION_ERROR,
                                         e.getMessage(), e);
@@ -78,15 +80,15 @@ public class ProcessExecutor {
                             }
                         }).join();
             } else {
-                process.getOperations()
-                        .forEach(operation -> execute(operation, category));
+                process.getOperations().forEach(
+                        operation -> execute(operation, process.getCategory()));
             }
         }
     }
     
     public void execute(final Operation operation,
             final ProcessCategory category) {
-        HttpRequestWithBody requestBuilder = unirest
+        HttpRequestWithBody requestBuilder = this.unirest
                 .request(operation.getMethod(), operation.getUrl());
         if (MapUtils.isNotEmpty(operation.getHeaders())) {
             for (final String header : operation.getHeaders().keySet()) {
@@ -95,7 +97,7 @@ public class ProcessExecutor {
             }
         }
         if (emptyIfNull(operation.getHeaders()).containsKey(CONTENT_TYPE)) {
-            unirest.config().addDefaultHeader(CONTENT_TYPE,
+            this.unirest.config().addDefaultHeader(CONTENT_TYPE,
                     APPLICATION_JSON.getMimeType());
         }
         HttpRequest<?> request = requestBuilder;
