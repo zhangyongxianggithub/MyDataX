@@ -7,12 +7,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 
+import kong.unirest.HttpMethod;
 import kong.unirest.HttpRequest;
 import kong.unirest.HttpRequestWithBody;
 import kong.unirest.Unirest;
@@ -25,6 +25,7 @@ import static java.util.Objects.nonNull;
 import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 import static kong.unirest.ContentType.APPLICATION_JSON;
 import static kong.unirest.HeaderNames.CONTENT_TYPE;
+import static kong.unirest.HttpMethod.GET;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -101,7 +102,7 @@ public class ProcessExecutor {
                     APPLICATION_JSON.getMimeType());
         }
         HttpRequest<?> request = requestBuilder;
-        if (!StringUtils.equals(operation.getMethod(), "get")
+        if (HttpMethod.valueOf(operation.getMethod()) != GET
                 && isNotBlank(operation.getBody())) {
             if (operation.isBase64()) {
                 request = requestBuilder
