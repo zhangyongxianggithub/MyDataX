@@ -205,6 +205,7 @@ public class RestWriter extends Writer {
                 log.info(
                         "{} postprocess execute successfully,  postprocess: {}",
                         this.getPluginName(), this.preprocess);
+                        this.getPluginName(), postprocess);
             }
             
             log.info(

@@ -28,6 +28,7 @@ import static kong.unirest.HeaderNames.CONTENT_TYPE;
 import static kong.unirest.HttpMethod.GET;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
@@ -110,6 +111,16 @@ public class ProcessExecutor {
             } else {
                 request = requestBuilder.body(operation.getBody());
             }
+            if (operation.isDebug()) {
+                log.info(
+                        "request {} method {} has body: {}, base64 encoded?{}, decoded body: {}",
+                        operation.getUrl(), operation.getMethod(),
+                        operation.getBody(), operation.isBase64(),
+                        operation.isBase64()
+                                ? Base64.getDecoder()
+                                        .decode(operation.getBody())
+                                : EMPTY);
+            }
         }
         final long startTime = System.nanoTime();
         request.asString().ifSuccess(response -> log.info(
@@ -134,6 +145,16 @@ public class ProcessExecutor {
                                 operation.getUrl(),
                                 category.name().toLowerCase()), e);
                     });
+                    log.error("operation {} category: {} execute failed, "
+                            + "http code: {}, message: {} , optional reason: {}",
+                            operation.getUrl(), category.name().toLowerCase(),
+                            response.getStatus(), response.getStatusText(),
+                            response.getBody());
+                    throw new OperationExecutionFailException(String.format(
+                            "operation %s category: %s http execute failed, http code: %d, message: %s, optional reason: %s",
+                            operation.getUrl(), category.name().toLowerCase(),
+                            response.getStatus(), response.getStatusText(),
+                            response.getBody()), null);
                 });
     }
 }
