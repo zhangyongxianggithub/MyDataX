@@ -62,7 +62,7 @@ public class ProcessExecutor {
     
     public void execute(final Process process) {
         if (nonNull(process) && isNotEmpty(process.getOperations())) {
-            if (process.isConcurrent()) {
+            if (process.isConcurrent() && process.getOperations().size() > 1) {
                 CompletableFuture
                         .allOf(process.getOperations().stream()
                                 .map(operation -> CompletableFuture.runAsync(
