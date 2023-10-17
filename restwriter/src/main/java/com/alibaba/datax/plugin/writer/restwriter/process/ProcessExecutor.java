@@ -88,7 +88,13 @@ public class ProcessExecutor {
             }
         }
     }
-    
+
+    /**
+     *  TODO check json value to determine if the request succeeds
+     * @param operation
+     * @param category
+     * @return
+     */
     public HttpResponse<String> execute(final Operation operation,
             final ProcessCategory category) {
         HttpRequestWithBody requestBuilder = this.unirest
