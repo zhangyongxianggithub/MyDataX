@@ -98,8 +98,8 @@ public class ProcessExecutor {
                         operation.getHeaders().get(header));
             }
         }
-        if (emptyIfNull(operation.getHeaders()).containsKey(CONTENT_TYPE)) {
-            this.unirest.config().addDefaultHeader(CONTENT_TYPE,
+        if (!emptyIfNull(operation.getHeaders()).containsKey(CONTENT_TYPE)) {
+            requestBuilder = requestBuilder.header(CONTENT_TYPE,
                     APPLICATION_JSON.getMimeType());
         }
         HttpRequest<?> request = requestBuilder;
@@ -129,11 +129,6 @@ public class ProcessExecutor {
                 response.getBody(),
                 Duration.ofNanos(System.nanoTime() - startTime)))
                 .ifFailure(response -> {
-                    log.error("operation {} category: {} execute failed, "
-                            + "http code: {}, message: {} , optional reason: {}",
-                            operation.getUrl(), category.name().toLowerCase(),
-                            response.getStatus(), response.getStatusText(),
-                            response.getBody());
                     response.getParsingError().ifPresent(e -> {
                         log.error(
                                 "operation {} category: {} execute failed, original body: {}, parsing exception",
