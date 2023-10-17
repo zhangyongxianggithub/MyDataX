@@ -15,6 +15,7 @@ import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import kong.unirest.HttpMethod;
 import kong.unirest.HttpRequest;
 import kong.unirest.HttpRequestWithBody;
+import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +89,7 @@ public class ProcessExecutor {
         }
     }
     
-    public void execute(final Operation operation,
+    public HttpResponse<String> execute(final Operation operation,
             final ProcessCategory category) {
         HttpRequestWithBody requestBuilder = this.unirest
                 .request(operation.getMethod(), operation.getUrl());
@@ -123,7 +124,7 @@ public class ProcessExecutor {
             }
         }
         final long startTime = System.nanoTime();
-        request.asString().ifSuccess(response -> log.info(
+        return request.asString().ifSuccess(response -> log.info(
                 "operation {} category: {} execute successfully,response: {}, body: {}, consume time: {}",
                 operation.getUrl(), category, response.getStatusText(),
                 response.getBody(),
