@@ -88,12 +88,13 @@ public class ProcessExecutor {
             }
         }
     }
-
+    
     /**
-     *  TODO check json value to determine if the request succeeds
-     * @param operation
-     * @param category
-     * @return
+     * TODO check json value to determine if the request succeeds
+     * 
+     * @param operation operations
+     * @param category  operations category
+     * @return response
      */
     public HttpResponse<String> execute(final Operation operation,
             final ProcessCategory category) {
