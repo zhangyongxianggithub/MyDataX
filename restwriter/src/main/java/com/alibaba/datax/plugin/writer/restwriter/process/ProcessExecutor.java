@@ -103,8 +103,9 @@ public class ProcessExecutor {
                             }
                         }).join();
             } else {
-                process.getOperations().forEach(
-                        operation -> execute(operation, process.getCategory()));
+                process.getOperations()
+                        .forEach(operation -> executeWithRetry(operation,
+                                process.getCategory()));
             }
         }
     }
