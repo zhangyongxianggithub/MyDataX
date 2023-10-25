@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.POSTPROCESS_OPERATION_ERROR;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.PREPROCESS_OPERATION_ERROR;
+import static com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory.PREPROCESS;
 import static java.util.Objects.nonNull;
 import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 import static kong.unirest.ContentType.APPLICATION_JSON;
@@ -71,8 +72,7 @@ public class ProcessExecutor {
                                         this.executor))
                                 .toArray(CompletableFuture[]::new))
                         .exceptionally(e -> {
-                            if (process
-                                    .getCategory() == ProcessCategory.PREPROCESS) {
+                            if (process.getCategory() == PREPROCESS) {
                                 throw DataXException.asDataXException(
                                         PREPROCESS_OPERATION_ERROR,
                                         e.getMessage(), e);
@@ -91,7 +91,7 @@ public class ProcessExecutor {
     
     /**
      * TODO check json value to determine if the request succeeds
-     * 
+     *
      * @param operation operations
      * @param category  operations category
      * @return response

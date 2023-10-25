@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.http.HttpException;
 
 import com.alibaba.datax.common.element.Column;
@@ -20,12 +19,11 @@ import com.alibaba.datax.common.spi.Writer;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.plugin.writer.restwriter.conf.ClientConfig;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Field;
-import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 import com.alibaba.datax.plugin.writer.restwriter.handler.ObjectRecordConverter;
 import com.alibaba.datax.plugin.writer.restwriter.handler.TypeHandlerRegistry;
-import com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory;
 import com.alibaba.datax.plugin.writer.restwriter.process.ProcessExecutor;
+import com.alibaba.datax.plugin.writer.restwriter.process.ProcessFactory;
 import com.alibaba.datax.plugin.writer.restwriter.validator.ConfigurationValidator;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
@@ -44,8 +42,6 @@ import kong.unirest.UnirestInstance;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
-import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_CONCURRENT;
-import static com.alibaba.datax.plugin.writer.restwriter.Key.ADDITIONAL_OPERATIONS;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_MODE;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.BATCH_SIZE;
 import static com.alibaba.datax.plugin.writer.restwriter.Key.CLIENT;
@@ -68,6 +64,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static kong.unirest.ContentType.APPLICATION_JSON;
 import static kong.unirest.HeaderNames.CONTENT_TYPE;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.prependIfMissing;
 
@@ -104,36 +101,23 @@ public class RestWriter extends Writer {
         
         private Process postprocess;
         
+        private ProcessFactory processFactory;
+        
         private ProcessExecutor processExecutor;
         
         @Override
         public void init() {
             this.originalConfig = super.getPluginJobConf();
             this.validateParameter();
-            this.preprocess = parseProcess(this.originalConfig, PREPROCESS);
-            this.postprocess = parseProcess(this.originalConfig, POSTPROCESS);
+            this.processFactory = new ProcessFactory(this.originalConfig);
+            this.preprocess = this.processFactory.createProcess(PREPROCESS);
+            this.postprocess = this.processFactory.createProcess(POSTPROCESS);
             this.processExecutor = new ProcessExecutor();
             log.info(
                     "{} job initialized, desc: {}, developer: {}, job conf: {}, job preprocess: {}, job postprocess: {}",
                     this.getPluginName(), this.getDescription(),
                     this.getDeveloper(), this.getPluginJobConf(),
                     this.preprocess, this.postprocess);
-        }
-        
-        private Process parseProcess(final Configuration jobConfiguration,
-                final ProcessCategory category) {
-            final Process process = new Process(category);
-            final Configuration conf = jobConfiguration
-                    .getConfiguration(category.getKey());
-            log.info("process configuration, category: {}, conf: {}", category,
-                    conf);
-            if (nonNull(conf)) {
-                process.setConcurrent(
-                        conf.getBool(ADDITIONAL_CONCURRENT, false));
-                process.setOperations(conf.getListWithJson(
-                        ADDITIONAL_OPERATIONS, Operation.class));
-            }
-            return process;
         }
         
         private void validateParameter() {
@@ -157,8 +141,8 @@ public class RestWriter extends Writer {
         public void prepare() {
             this.startTime = System.currentTimeMillis();
             
-            if (nonNull(this.preprocess) && CollectionUtils
-                    .isNotEmpty(this.preprocess.getOperations())) {
+            if (nonNull(this.preprocess)
+                    && isNotEmpty(this.preprocess.getOperations())) {
                 this.processExecutor.execute(this.preprocess);
                 log.info(
                         "{} job prepared successfully after preprocess, job conf: {}, preprocess: {}",
@@ -199,8 +183,8 @@ public class RestWriter extends Writer {
         public void post() {
             this.endTime = System.currentTimeMillis();
             
-            if (nonNull(this.postprocess) && CollectionUtils
-                    .isNotEmpty(this.postprocess.getOperations())) {
+            if (nonNull(this.postprocess)
+                    && isNotEmpty(this.postprocess.getOperations())) {
                 this.processExecutor.execute(this.postprocess);
                 log.info(
                         "{} postprocess execute successfully,  postprocess: {}",
