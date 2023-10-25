@@ -25,4 +25,8 @@ public class Operation {
     
     private boolean debug;
     
+    private int maxRetries = 1;
+    
+    private String jsonExpression;
+    
 }

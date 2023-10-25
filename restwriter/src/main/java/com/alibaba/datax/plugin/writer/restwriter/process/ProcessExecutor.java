@@ -2,6 +2,7 @@ package com.alibaba.datax.plugin.writer.restwriter.process;
 
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -12,10 +13,12 @@ import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 
+import dev.failsafe.RetryPolicy;
 import kong.unirest.HttpMethod;
 import kong.unirest.HttpRequest;
 import kong.unirest.HttpRequestWithBody;
 import kong.unirest.HttpResponse;
+import kong.unirest.HttpStatus;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
@@ -89,9 +92,36 @@ public class ProcessExecutor {
         }
     }
     
+    public HttpResponse<String> executeWithRetry(final Operation operation,
+            int maxRetries, final ProcessCategory category) {
+        final RetryPolicy<HttpResponse<String>> retryPolicy = RetryPolicy
+                .<HttpResponse<String>>builder()
+                .handleResultIf(response -> response
+                        .getStatus() >= HttpStatus.BAD_REQUEST)
+                .handleResultIf(response->{
+                    if(response.getBody())
+                })
+                .onFailedAttempt(e -> log.error(
+                        "write failed, attempt execution times: {},"
+                                + " possible result response code: {},  possible result response body: {}",
+                        e.getAttemptCount() + 1,
+                        Optional.ofNullable(e.getLastResult())
+                                .map(HttpResponse::getStatusText).orElse(null),
+                        Optional.ofNullable(e.getLastResult())
+                                .map(HttpResponse::getBody).orElse(null),
+                        e.getLastException()))
+                .onRetry(e -> log.warn("failure #{}th retrying.",
+                        e.getAttemptCount()))
+                .onRetriesExceeded(e -> log.error(
+                        "fail to write. max retries exceeded. cause: {}",
+                        nonNull(e.getException())
+                                ? e.getException().getMessage()
+                                : e.getResult().getStatusText(),
+                        e.getException()))
+                .build();
+    }
+    
     /**
-     * TODO check json value to determine if the request succeeds
-     *
      * @param operation operations
      * @param category  operations category
      * @return response
