@@ -2,38 +2,48 @@ package com.alibaba.datax.plugin.writer.restwriter.process;
 
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Optional;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Process;
 
+import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import kong.unirest.HttpMethod;
 import kong.unirest.HttpRequest;
 import kong.unirest.HttpRequestWithBody;
 import kong.unirest.HttpResponse;
-import kong.unirest.HttpStatus;
+import kong.unirest.JsonObjectMapper;
+import kong.unirest.ObjectMapper;
 import kong.unirest.Unirest;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.EXPRESSION_EVALUATE_FAILED_EXCEPTION;
+import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.OPERATION_RESULT_ERROR_EXCEPTION;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.POSTPROCESS_OPERATION_ERROR;
 import static com.alibaba.datax.plugin.writer.restwriter.RestWriterErrorCode.PREPROCESS_OPERATION_ERROR;
 import static com.alibaba.datax.plugin.writer.restwriter.process.ProcessCategory.PREPROCESS;
 import static java.util.Objects.nonNull;
+import static java.util.Optional.ofNullable;
 import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 import static kong.unirest.ContentType.APPLICATION_JSON;
 import static kong.unirest.HeaderNames.CONTENT_TYPE;
 import static kong.unirest.HttpMethod.GET;
+import static kong.unirest.HttpStatus.MULTIPLE_CHOICE;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isNoneBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
@@ -47,6 +57,10 @@ public class ProcessExecutor {
     
     private final Executor executor;
     
+    private final ObjectMapper json;
+    
+    private final ExpressionParser expressionParser;
+    
     public ProcessExecutor() {
         this(new ForkJoinPool(Runtime.getRuntime().availableProcessors(),
                 defaultForkJoinWorkerThreadFactory, null, true));
@@ -54,6 +68,8 @@ public class ProcessExecutor {
     
     public ProcessExecutor(final Executor executor) {
         this.executor = executor;
+        this.json = new JsonObjectMapper();
+        this.expressionParser = new SpelExpressionParser();
         this.unirest = Unirest.spawnInstance();
         this.unirest.config().addShutdownHook(true);
         this.unirest.config().verifySsl(false);
@@ -70,7 +86,8 @@ public class ProcessExecutor {
                 CompletableFuture
                         .allOf(process.getOperations().stream()
                                 .map(operation -> CompletableFuture.runAsync(
-                                        () -> execute(operation,
+                                        () -> executeWithExpectedResponse(
+                                                operation,
                                                 process.getCategory()),
                                         this.executor))
                                 .toArray(CompletableFuture[]::new))
@@ -93,32 +110,85 @@ public class ProcessExecutor {
     }
     
     public HttpResponse<String> executeWithRetry(final Operation operation,
-            int maxRetries, final ProcessCategory category) {
-        final RetryPolicy<HttpResponse<String>> retryPolicy = RetryPolicy
-                .<HttpResponse<String>>builder()
-                .handleResultIf(response -> response
-                        .getStatus() >= HttpStatus.BAD_REQUEST)
-                .handleResultIf(response->{
-                    if(response.getBody())
-                })
-                .onFailedAttempt(e -> log.error(
-                        "write failed, attempt execution times: {},"
-                                + " possible result response code: {},  possible result response body: {}",
-                        e.getAttemptCount() + 1,
-                        Optional.ofNullable(e.getLastResult())
-                                .map(HttpResponse::getStatusText).orElse(null),
-                        Optional.ofNullable(e.getLastResult())
-                                .map(HttpResponse::getBody).orElse(null),
-                        e.getLastException()))
-                .onRetry(e -> log.warn("failure #{}th retrying.",
-                        e.getAttemptCount()))
-                .onRetriesExceeded(e -> log.error(
-                        "fail to write. max retries exceeded. cause: {}",
-                        nonNull(e.getException())
-                                ? e.getException().getMessage()
-                                : e.getResult().getStatusText(),
-                        e.getException()))
-                .build();
+            final ProcessCategory category) {
+        if (operation.getMaxRetries() > 1) {
+            final RetryPolicy<HttpResponse<String>> retryPolicy = RetryPolicy
+                    .<HttpResponse<String>>builder()
+                    .handleResultIf(
+                            response -> response.getStatus() >= MULTIPLE_CHOICE)
+                    .onFailedAttempt(e -> log.error(
+                            "{} operation execute failed, attempt execution times: {},"
+                                    + " possible result response code: {},  possible result response body: {}",
+                            category, e.getAttemptCount() + 1,
+                            ofNullable(e.getLastResult())
+                                    .map(HttpResponse::getStatusText)
+                                    .orElse(null),
+                            ofNullable(e.getLastResult())
+                                    .map(HttpResponse::getBody).orElse(null),
+                            e.getLastException()))
+                    .onRetry(e -> log.warn(
+                            "{} operation failure #{}th retrying.", category,
+                            e.getAttemptCount()))
+                    .onRetriesExceeded(e -> log.error(
+                            "fail to execute operation {}. max retries exceeded. cause: {}",
+                            operation,
+                            nonNull(e.getException())
+                                    ? e.getException().getMessage()
+                                    : e.getResult().getStatusText(),
+                            e.getException()))
+                    .build();
+            return Failsafe.with(retryPolicy).get(
+                    () -> executeWithExpectedResponse(operation, category));
+        } else {
+            return executeWithExpectedResponse(operation, category);
+        }
+    }
+    
+    public HttpResponse<String> executeWithExpectedResponse(
+            final Operation operation, final ProcessCategory category) {
+        final HttpResponse<String> response = execute(operation, category);
+        if (response.getHeaders().containsKey(CONTENT_TYPE)
+                && response.getHeaders().get(CONTENT_TYPE).stream()
+                        .anyMatch(contentType -> contentType
+                                .contains(APPLICATION_JSON.getMimeType()))
+                && isNotBlank(operation.getJsonExpression())) {
+            if (isNoneBlank(response.getBody())) {
+                log.warn("response body is empty, operation: {}", operation);
+                throw DataXException.asDataXException(
+                        EXPRESSION_EVALUATE_FAILED_EXCEPTION,
+                        String.format("operation %s return empty response body",
+                                operation.getUrl()));
+            }
+            try {
+                final Map<?, ?> bodyResponse = json
+                        .readValue(response.getBody(), Map.class);
+                if (!BooleanUtils.toBoolean(expressionParser
+                        .parseExpression(operation.getJsonExpression())
+                        .getValue(bodyResponse, boolean.class))) {
+                    throw DataXException.asDataXException(
+                            OPERATION_RESULT_ERROR_EXCEPTION,
+                            String.format(
+                                    "operation return result is not right according the json expression,"
+                                            + " result %s, expression: %s",
+                                    bodyResponse,
+                                    operation.getJsonExpression()));
+                }
+            } catch (final Exception e) {
+                log.error(
+                        "body {} can't be deserialized or can't be evaluated against json expression {}, operation: {}",
+                        response.getBody(), operation.getJsonExpression(),
+                        operation);
+                throw DataXException.asDataXException(
+                        EXPRESSION_EVALUATE_FAILED_EXCEPTION,
+                        String.format(
+                                "operation result can't be deserialized or evaluated failed,"
+                                        + " result %s, expression: %s",
+                                response.getBody(),
+                                operation.getJsonExpression()),
+                        e);
+            }
+        }
+        return response;
     }
     
     /**

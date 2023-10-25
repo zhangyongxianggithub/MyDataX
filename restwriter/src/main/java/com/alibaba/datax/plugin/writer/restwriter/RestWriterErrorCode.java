@@ -41,7 +41,11 @@ public enum RestWriterErrorCode implements ErrorCode {
     
     POSTPROCESS_OPERATION_ERROR("RestWriter-14", "后处理失败"),
     
-    CONCURRENT_INVALID_EXCEPTION("RestWriter-15", "并发参数不合法");
+    CONCURRENT_INVALID_EXCEPTION("RestWriter-15", "并发参数不合法"),
+    
+    OPERATION_RESULT_ERROR_EXCEPTION("RestWriter-16", "返回结果错误"),
+    
+    EXPRESSION_EVALUATE_FAILED_EXCEPTION("RestWriter-17", "谓词表达式计算错误");
     
     private final String code;
     

@@ -105,7 +105,9 @@
                   },
                   "body": "aaaaaaaa",
                   "debug": true,
-                  "base64": true
+                  "base64": true,
+                  "maxRetries": 3,
+                  "jsonExpression": "method == 'post'"
                 },
                 {
                   "url": "http://localhost:8080/echo/preprocess/post",
