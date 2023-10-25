@@ -1,6 +1,7 @@
 package com.alibaba.datax.plugin.writer.restwriter.process;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +12,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.plugin.writer.restwriter.conf.Operation;
@@ -43,7 +45,7 @@ import static kong.unirest.HttpStatus.MULTIPLE_CHOICE;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.MapUtils.emptyIfNull;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isNoneBlank;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
@@ -73,7 +75,7 @@ public class ProcessExecutor {
         this.unirest = Unirest.spawnInstance();
         this.unirest.config().addShutdownHook(true);
         this.unirest.config().verifySsl(false);
-        this.unirest.config().automaticRetries(true);
+        this.unirest.config().automaticRetries(false);
         this.unirest.config()
                 .connectTimeout((int) Duration.ofHours(1).toMillis());
         this.unirest.config()
@@ -83,15 +85,13 @@ public class ProcessExecutor {
     public void execute(final Process process) {
         if (nonNull(process) && isNotEmpty(process.getOperations())) {
             if (process.isConcurrent() && process.getOperations().size() > 1) {
-                CompletableFuture
-                        .allOf(process.getOperations().stream()
-                                .map(operation -> CompletableFuture.runAsync(
-                                        () -> executeWithExpectedResponse(
-                                                operation,
+                CompletableFuture.allOf(process
+                        .getOperations().stream().map(
+                                operation -> CompletableFuture.runAsync(
+                                        () -> executeWithRetry(operation,
                                                 process.getCategory()),
                                         this.executor))
-                                .toArray(CompletableFuture[]::new))
-                        .exceptionally(e -> {
+                        .toArray(CompletableFuture[]::new)).exceptionally(e -> {
                             if (process.getCategory() == PREPROCESS) {
                                 throw DataXException.asDataXException(
                                         PREPROCESS_OPERATION_ERROR,
@@ -114,12 +114,14 @@ public class ProcessExecutor {
         if (operation.getMaxRetries() > 1) {
             final RetryPolicy<HttpResponse<String>> retryPolicy = RetryPolicy
                     .<HttpResponse<String>>builder()
+                    .withMaxRetries(operation.getMaxRetries())
                     .handleResultIf(
                             response -> response.getStatus() >= MULTIPLE_CHOICE)
+                    .withBackoff(1, 5, ChronoUnit.SECONDS)
                     .onFailedAttempt(e -> log.error(
                             "{} operation execute failed, attempt execution times: {},"
                                     + " possible result response code: {},  possible result response body: {}",
-                            category, e.getAttemptCount() + 1,
+                            category, e.getAttemptCount(),
                             ofNullable(e.getLastResult())
                                     .map(HttpResponse::getStatusText)
                                     .orElse(null),
@@ -152,7 +154,7 @@ public class ProcessExecutor {
                         .anyMatch(contentType -> contentType
                                 .contains(APPLICATION_JSON.getMimeType()))
                 && isNotBlank(operation.getJsonExpression())) {
-            if (isNoneBlank(response.getBody())) {
+            if (isBlank(response.getBody())) {
                 log.warn("response body is empty, operation: {}", operation);
                 throw DataXException.asDataXException(
                         EXPRESSION_EVALUATE_FAILED_EXCEPTION,
@@ -160,11 +162,20 @@ public class ProcessExecutor {
                                 operation.getUrl()));
             }
             try {
-                final Map<?, ?> bodyResponse = json
-                        .readValue(response.getBody(), Map.class);
+                final Object bodyResponse = json.readValue(response.getBody(),
+                        Map.class);
+                if (operation.isDebug()) {
+                    log.info(
+                            "operation {} return response body: {}, deserialized value {}, class {}",
+                            operation.getUrl(), operation.getBody(),
+                            bodyResponse, bodyResponse.getClass().getName());
+                }
+                final StandardEvaluationContext context = new StandardEvaluationContext(
+                        bodyResponse);
+                context.addPropertyAccessor(new MapAccessor());
                 if (!BooleanUtils.toBoolean(expressionParser
                         .parseExpression(operation.getJsonExpression())
-                        .getValue(bodyResponse, boolean.class))) {
+                        .getValue(context, boolean.class))) {
                     throw DataXException.asDataXException(
                             OPERATION_RESULT_ERROR_EXCEPTION,
                             String.format(

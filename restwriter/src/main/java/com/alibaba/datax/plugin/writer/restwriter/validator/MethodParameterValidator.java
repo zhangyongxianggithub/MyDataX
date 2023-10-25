@@ -15,8 +15,8 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
  **/
 public class MethodParameterValidator implements ParameterValidator<String> {
     
-    private final List<String> method = Lists.newArrayList("post", "put",
-            "patch");
+    private final List<String> method = Lists.newArrayList("get", "post", "put",
+            "patch", "delete");
     
     @Override
     public void validateImmediateValue(final String parameter) {
