@@ -1,11 +1,14 @@
 package com.alibaba.datax.plugin.rdbms.util;
 
 import com.alibaba.datax.common.exception.DataXException;
+import com.alibaba.datax.common.statistics.PerfRecord;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.datax.common.util.RetryUtil;
 import com.alibaba.datax.plugin.rdbms.reader.Key;
 import com.alibaba.druid.sql.parser.SQLParserUtils;
 import com.alibaba.druid.sql.parser.SQLStatementParser;
+import com.alibaba.druid.support.json.JSONUtils;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.commons.lang3.StringUtils;
@@ -18,6 +21,7 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 public final class DBUtil {
     private static final Logger LOG = LoggerFactory.getLogger(DBUtil.class);
@@ -787,7 +791,7 @@ public final class DBUtil {
                     DBUtilErrorCode.RS_ASYNC_ERROR, "异步获取ResultSet失败", e);
         }
     }
-    
+
     public static void loadDriverClass(String pluginType, String pluginName) {
         try {
             String pluginJsonPath = StringUtils.join(
@@ -806,6 +810,28 @@ public final class DBUtil {
             throw DataXException.asDataXException(DBUtilErrorCode.CONF_ERROR,
                     "数据库驱动加载错误, 请确认libs目录有驱动jar包且plugin.json中drivers配置驱动类正确!",
                     e);
+        }
+    }
+
+    public static void main(String[] args) throws SQLException {
+        Connection conn = DBUtil.getConnection(DataBaseType.MySql, "jdbc:mysql://bjdd-igu-bce08.bjdd.baidu.com:8306/gbi-local-database?useSSL=false",
+                "root", "acg-2022-mysql");
+       ResultSet rs = DBUtil.query(conn, "select `制造商`,`商品名称`,`商品子类别`,`商品类别`,`地区`,`客户名称`,`客户类型`,`省份`,`订单编号`,`邮寄方式` from `超市营收明细_2b047583`", Integer.MIN_VALUE);
+
+        ResultSetMetaData metaData = rs.getMetaData();
+
+        int columnNumber = metaData.getColumnCount();
+        long rsNextUsedTime = 0;
+        long lastTime = System.nanoTime();
+        while (rs.next()) {
+            rsNextUsedTime += (System.nanoTime() - lastTime);
+            Map<String,Object> row= Maps.newHashMap();
+            int bound = metaData.getColumnCount();
+            for (int i = 1; i <= bound; i++) {
+                row.put(metaData.getColumnName(i), rs.getObject(i));
+            }
+            System.out.println(JSONUtils.toJSONString(row));
+            lastTime = System.nanoTime();
         }
     }
 }
